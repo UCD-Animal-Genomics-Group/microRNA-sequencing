@@ -250,16 +250,6 @@ cd !$
 # genome UMD3.1 from NCBI):
 wget ftp://mirbase.org/pub/mirbase/21/genomes/bta.gff3
 
-# Convert the gff3 file from miRBase to gtf format:
-perl $HOME/SVN/gff2gtf.pl -i \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_miRNA.gff3 \
--o /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_miRNA.gtf
-
-# Select pre-miRNA and mature miRNA information from annotation file and save
-# into two distinct files:
-grep -P "\tpre-miRNA\t" Btau_miRNA.gtf >> Btau_pre-miRNA.gtf
-grep -P "\tmiRNA\t" Btau_miRNA.gtf >> Btau_mature-miRNA.gtf
-
 ##########################################################
 # Preparation of Bos taurus miRNA sequences from miRBase #
 ##########################################################

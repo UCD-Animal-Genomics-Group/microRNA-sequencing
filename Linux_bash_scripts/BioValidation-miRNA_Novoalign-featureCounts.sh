@@ -123,14 +123,14 @@ do outfile=`basename $file | perl -p -e 's/_trim\.fastq/\.sam/'`; \
 echo "novoalign -d \
 /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/Novoindex.3.4/Btau_UMD3.1_multi.ndx \
 -f $file -F ILM1.8 -t 30 -l 15 -s 1 -o SAM -m -e 50 -R 3 -r 'Exhaustive' 20 \
->> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/${outfile}" \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/${outfile}" \
 >> alignment.sh; \
 done
 
 # Split and run all scripts on Stampede
 # (note: to allow loading in shared memory of the indexed genome wait 60sec
 # between the first shell script job and the rest of them):
-split -d -l 12 alignment.sh alignment.sh.
+split -d -l 8 alignment.sh alignment.sh.
 for script in `ls alignment.sh.*`
 do
 chmod 755 $script
@@ -140,6 +140,11 @@ then
 sleep 60
 fi
 done
+
+
+
+
+
 
 # Generate a master file containing Novoalign stats results
 for file in `ls /home/nnalpas/scratch/miRNAseqTimeCourse/Novo-feature/alignment/*.nohup`; do grep -oP "\d{4}.*_trim\.fastq" $file | perl -p -e 's/^(\d{4}_.*)_trim.fastq/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/filename.txt; grep "Read Sequences\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*/$1\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/inputread.txt; grep "Unique Alignment\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/unique.txt; grep "Multi Mapped\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/multi.txt; grep "No Mapping Found\:" $file | perl -p -e 's/\#\s*\w*\s\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/unmapped.txt; grep "Read Length\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/fail.txt; paste filename.txt inputread.txt unique.txt multi.txt unmapped.txt fail.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/novoalign.txt; done;
@@ -157,8 +162,23 @@ rm -f filename.txt inputread.txt unique.txt multi.txt unmapped.txt fail.txt novo
 mkdir -p $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA
 cd !$
 
+# Run featureCounts with one sample to check if it is working fine:
+featureCounts -a \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/bta.gff3 \
+-M --minOverlap 3 -s 1 -T 3 -t miRNA -g ID -o ./E10_counts.txt \
+$HOME/scratch/miRNAseqValidation/Novo-feature/alignment/E10.sam
+
 # Run featureCounts on SAM file containing multihits and uniquely mapped reads using stranded parameter
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/ -name *.sam`; do sample=`basename $file | perl -p -e 's/\.sam//'`; echo "mkdir $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$sample; cd $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$sample; featureCounts -a /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_pre-miRNA.gtf -t exon -g gene_id -o $sample -s 1 -T 1 -M --minReadOverlap 3 $file" >> count.sh; done;
+for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/ \
+-name *.sam`; do sample=`basename $file | perl -p -e 's/\.sam//'`; \
+echo "mkdir \
+$HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$sample; \
+cd $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$sample; \
+featureCounts -a \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_pre-miRNA.gtf \
+-t exon -g gene_id -o $sample -s 1 -T 1 -M  --minOverlap 3 $file" \
+>> count.sh; \
+done
 
 # Split and run all scripts on Stampede
 split -d -l 35 count.sh count.sh.
