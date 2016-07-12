@@ -5,7 +5,7 @@
 # Authors: Nalpas, N.C.; Correia, C.N. (2014) 
 # Zenodo DOI badge: http://dx.doi.org/10.5281/zenodo.16164
 # Version 1.2.0
-# Last updated on: 07/07/2016
+# Last updated on: 12/07/2016
 
 ################################
 # Download and files check sum #
@@ -250,10 +250,19 @@ cd !$
 # genome UMD3.1 from NCBI):
 wget ftp://mirbase.org/pub/mirbase/21/genomes/bta.gff3
 
+# Convert the GFF3 annotation file from miRBase to GTF format:
+perl /home/nnalpas/SVN/gff2gtf.pl -i \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/bta.gff3 \
+-o /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_miRNA2016.gtf
+grep -P "\tpre-miRNA\t" Btau_miRNA2016.gtf >> Btau_pre-miRNA2016.gtf
+grep -P "\tmiRNA\t" Btau_miRNA2016.gtf >> Btau_mature-miRNA2016.gtf
+
 ##########################################################
 # Preparation of Bos taurus miRNA sequences from miRBase #
 ##########################################################
 
+# Go to working directory:
+cd /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta
 # Download the various FASTA files for mature, high confidence mature,
 # precursor(hairpin), and high confidence precursor miRNA sequences
 # from miRBase (version 21):
@@ -264,37 +273,37 @@ wget ftp://mirbase.org/pub/mirbase/21/high_conf_mature.fa.gz
 
 # Uncompress the miRNA FASTA files from miRBase:
 for file in \
-`ls /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/*.gz`; \
+`ls /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta*.gz`; \
 do gzip -d $file; \
 done
 
 # Combine information from miRNA annotation file and mature + high confidence
 # mature FASTA sequences obtained from miRBase:
 perl /home/nnalpas/Scripts/miRNA_info_grepping.pl -fasta \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/mature.fa \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/mature.fa \
 -gff \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_miRNA.gff3 \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/bta.gff3 \
 -output mature_miRNA_Btaurus.txt
 
 perl /home/nnalpas/Scripts/miRNA_info_grepping.pl -fasta \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/high_conf_mature.fa \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/high_conf_mature.fa \
 -gff \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_miRNA.gff3 \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/bta.gff3 \
 -output high_conf_mature_miRNA_Btaurus.txt
 
 # Create the mature miRNA FASTA file for Bos taurus sequences only:
 perl /home/nnalpas/SVN/Fasta_keep_value.pl -fasta \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/mature.fa \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/mature.fa \
 -keep Bos -output bta_mature-miRNA.fa
 
 # Create the mature miRNA FASTA file for other all species:
 perl /home/nnalpas/SVN/Fasta_ignore_value.pl -fasta \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/mature.fa \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/mature.fa \
 -ignore Bos -output other_mature-miRNA.fa
 
 # Create the precursor (hairpin) miRNAs FASTA file for Bos taurus sequences only:
 perl /home/nnalpas/SVN/Fasta_keep_value.pl -fasta \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/hairpin.fa \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/hairpin.fa \
 -keep Bos -output bta_hairpin-miRNA.fa
 
 ######################

@@ -1,12 +1,12 @@
 ##############################################################################
 # miRNA-seq Biological Validation of Blood Serum from Field-infected Animals #
-#        --- Linux bioinformatics workflow for known sense genes  ---        #
+#          --- Linux bioinformatics workflow for known miRNAs  ---           #
 #             -- Method 1: Novoalign-featureCounts softwares --              #
 ##############################################################################
 # Authors: Nalpas, N.C.; Correia, C.N. (2014) 
 # Zenodo DOI badge: http://dx.doi.org/10.5281/zenodo.16164
 # Version 1.2.0
-# Last updated on: 07/07/2016
+# Last updated on: 12/07/2016
 
 ########################################################################
 # Merge and uncompress miRNA-seq FASTQ files to be used with Novoalign #
@@ -141,102 +141,226 @@ sleep 60
 fi
 done
 
+# Generate a master file containing Novoalign stats results:
+for file in \
+`ls $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/alignment*.nohup`; \
+do grep -oP \
+"E\d+_trim\.fastq" $file | perl -p -e 's/^(E\d+)_trim\.fastq/$1/' \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/filename.txt; \
+grep "Read Sequences\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*/$1\n/' \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/inputread.txt; \
+grep "Unique Alignment\:" $file | \
+perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/unique.txt; \
+grep "Multi Mapped\:" $file | \
+perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/multi.txt; \
+grep "No Mapping Found\:" $file | \
+perl -p -e 's/\#\s*\w*\s\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/unmapped.txt; \
+grep "Read Length\:" $file | \
+perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' \
+>> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/fail.txt; \
+paste filename.txt inputread.txt unique.txt multi.txt unmapped.txt fail.txt \
+> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/novoalign.txt; \
+done
 
+echo -e "Sample\tInput reads\tUniquely aligned reads\tPercentage uniquely \
+aligned reads\tMulti mapped reads\tPercentage multi mapped reads\tUnmapped \
+reads\tPercentage unmapped reads\tToo short reads\tPercentage too short reads" \
+| cat - $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/novoalign.txt \
+> $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/alignment_stats.txt
 
-
-
-
-# Generate a master file containing Novoalign stats results
-for file in `ls /home/nnalpas/scratch/miRNAseqTimeCourse/Novo-feature/alignment/*.nohup`; do grep -oP "\d{4}.*_trim\.fastq" $file | perl -p -e 's/^(\d{4}_.*)_trim.fastq/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/filename.txt; grep "Read Sequences\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*/$1\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/inputread.txt; grep "Unique Alignment\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/unique.txt; grep "Multi Mapped\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/multi.txt; grep "No Mapping Found\:" $file | perl -p -e 's/\#\s*\w*\s\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/unmapped.txt; grep "Read Length\:" $file | perl -p -e 's/\#\s*\w*\s\w*\:\s*(\d*)\s*.(\s*\d*\.\d*).*\s*/$1\t$2\n/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/fail.txt; paste filename.txt inputread.txt unique.txt multi.txt unmapped.txt fail.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/novoalign.txt; done;
-echo -e "Sample\tInput reads\tUniquely aligned reads\tPercentage uniquely aligned reads\tMulti mapped reads\tPercentage multi mapped reads\tUnmapped reads\tPercentage unmapped reads\tToo short reads\tPercentage too short reads" | cat - $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/novoalign.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/alignment.txt
-rm -f filename.txt inputread.txt unique.txt multi.txt unmapped.txt fail.txt novoalign.txt
-
+rm -r filename.txt inputread.txt unique.txt multi.txt \
+unmapped.txt fail.txt novoalign.txt
 
 ##########################################
 # Count summarisation with featureCounts #
 ##########################################
 
-# Use featureCounts to perform count summarisation; required package is featureCounts which is part of subread software, consult manual for details: http://bioinf.wehi.edu.au/subread-package/SubreadUsersGuide.pdf
+# Required package is featureCounts, which is part of Subread 1.5.0-p1 software,
+# consult manual for details:
+# http://bioinf.wehi.edu.au/subread-package/SubreadUsersGuide.pdf
 
-# Create and enter the gene count summarisation directory for pre-miRNA
-mkdir -p $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA
+# Create and enter the gene count summarisation directory for pre-miRNA:
+mkdir -p $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA
 cd !$
 
 # Run featureCounts with one sample to check if it is working fine:
 featureCounts -a \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/bta.gff3 \
--M --minOverlap 3 -s 1 -T 3 -t miRNA -g ID -o ./E10_counts.txt \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_pre-miRNA2016.gtf \
+-t exon -g gene_id -s 1 -T 1 -M -O --minOverlap 3 \
+-o ./E10_counts.txt \
 $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/E10.sam
 
-# Run featureCounts on SAM file containing multihits and uniquely mapped reads using stranded parameter
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/ \
+# Create bash script to run featureCounts on SAM file containing multihits and
+# uniquely mapped reads using stranded parameter:
+for file in `find $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/ \
 -name *.sam`; do sample=`basename $file | perl -p -e 's/\.sam//'`; \
-echo "mkdir \
-$HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$sample; \
-cd $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$sample; \
+echo \
+"mkdir $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/$sample; \
+cd \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/$sample; \
 featureCounts -a \
-/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_pre-miRNA.gtf \
--t exon -g gene_id -o $sample -s 1 -T 1 -M  --minOverlap 3 $file" \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_pre-miRNA2016.gtf \
+-t exon -g gene_id -s 1 -T 1 -M -O --minOverlap 3 -o ${sample}-counts.txt $file" \
 >> count.sh; \
 done
 
-# Split and run all scripts on Stampede
-split -d -l 35 count.sh count.sh.
+# Split and run all scripts on Stampede:
+split -d -l 8 count.sh count.sh.
 for script in `ls count.sh.*`
 do
 chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
 
-# Combine and check all output from featureCounts
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA -name *.summary`; do grep -oP "6.*\.sam" $file | perl -p -e 's/\.sam//' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/filename.txt; grep "Assigned" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/Assigned.txt ; grep "Unassigned_Ambiguity" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/Unassigned_Ambiguity.txt; grep "Unassigned_MultiMapping" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/Unassigned_MultiMapping.txt; grep "Unassigned_NoFeatures" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/Unassigned_NoFeatures.txt; grep "Unassigned_Unmapped" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/Unassigned_Unmapped.txt; paste filename.txt Assigned.txt Unassigned_Ambiguity.txt Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt Unassigned_Unmapped.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/featureCounts.txt; done;
-echo -e "Sample\tAssigned reads\tUnassigned ambiguous reads\tUnassigned multi mapping reads\tUnassigned no features reads\tUnassigned unmapped reads" | cat - $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/featureCounts.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/Gene_count_stats.txt
-rm -f filename.txt Assigned.txt Unassigned_Ambiguity.txt Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt Unassigned_Unmapped.txt featureCounts.txt
+# Combine and check all output from featureCounts:
+for file in \
+`find $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA \
+-name *.summary`; \
+do grep -oP "E\d+\.sam" $file | perl -p -e 's/\.sam//' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/filename.txt; \
+grep "Assigned" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/Assigned.txt ; \
+grep "Unassigned_Ambiguity" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/Unassigned_Ambiguity.txt; \
+grep "Unassigned_MultiMapping" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/Unassigned_MultiMapping.txt; \
+grep "Unassigned_NoFeatures" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/Unassigned_NoFeatures.txt; \
+grep "Unassigned_Unmapped" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/Unassigned_Unmapped.txt; \
+paste filename.txt Assigned.txt Unassigned_Ambiguity.txt \
+Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt Unassigned_Unmapped.txt \
+> $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/featureCounts.txt; \
+done
 
-# Note, run the next section only after the previous featureCounts jobs are done
-# Create and enter the gene count summarisation directory for mature-miRNA
-mkdir -p $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA
+echo -e "Sample\tAssigned reads\tUnassigned ambiguous reads\tUnassigned \
+multi mapping reads\tUnassigned no features reads\tUnassigned unmapped reads" \
+| cat - $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/featureCounts.txt \
+> $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/pre_miRNA-Gene_count_stats.txt
+
+rm -f filename.txt Assigned.txt Unassigned_Ambiguity.txt \
+Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt \
+Unassigned_Unmapped.txt featureCounts.txt
+
+# Note, run the next section only after the previous featureCounts jobs are done.
+# Create and enter the gene count summarisation directory for mature miRNA:
+mkdir -p $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA
 cd !$
 
-# Run featureCounts on SAM file containing multihits and uniquely mapped reads using stranded parameter
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/ -name *.sam`; do sample=`basename $file | perl -p -e 's/\.sam//'`; echo "mkdir $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/$sample; cd $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/$sample; featureCounts -a /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_mature-miRNA.gtf -t exon -g gene_id -o $sample -s 1 -T 1 -M --minReadOverlap 3 $file" >> count.sh; done;
+# Create bash script to run featureCounts on SAM file containing multihits and
+# uniquely mapped reads using stranded parameter:
+for file in `find $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/ \
+-name *.sam`; do sample=`basename $file | perl -p -e 's/\.sam//'`; \
+echo \
+"mkdir $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/$sample; \
+cd \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/$sample; \
+featureCounts -a \
+/workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_mature-miRNA2016.gtf \
+-t exon -g gene_id -s 1 -T 1 -M -O --minOverlap 3 -o ${sample}-counts.txt $file" \
+>> count.sh; \
+done
 
-# Split and run all scripts on Stampede
-split -d -l 35 count.sh count.sh.
+# Split and run all scripts on Stampede:
+split -d -l 8 count.sh count.sh.
 for script in `ls count.sh.*`
 do
 chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
 
-# Combine and check all output from featureCounts
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA -name *.summary`; do grep -oP "6.*\.sam" $file | perl -p -e 's/\.sam//' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/filename.txt; grep "Assigned" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/Assigned.txt ; grep "Unassigned_Ambiguity" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/Unassigned_Ambiguity.txt; grep "Unassigned_MultiMapping" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/Unassigned_MultiMapping.txt; grep "Unassigned_NoFeatures" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/Unassigned_NoFeatures.txt; grep "Unassigned_Unmapped" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/Unassigned_Unmapped.txt; paste filename.txt Assigned.txt Unassigned_Ambiguity.txt Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt Unassigned_Unmapped.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/featureCounts.txt; done;
-echo -e "Sample\tAssigned reads\tUnassigned ambiguous reads\tUnassigned multi mapping reads\tUnassigned no features reads\tUnassigned unmapped reads" | cat - $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/featureCounts.txt > $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/Gene_count_stats.txt
-rm -f filename.txt Assigned.txt Unassigned_Ambiguity.txt Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt Unassigned_Unmapped.txt featureCounts.txt
+# Combine and check all output from featureCounts:
+for file in \
+`find $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA \
+-name *.summary`; \
+do grep -oP "E\d+\.sam" $file | perl -p -e 's/\.sam//' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/filename.txt; \
+grep "Assigned" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/Assigned.txt ; \
+grep "Unassigned_Ambiguity" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/Unassigned_Ambiguity.txt; \
+grep "Unassigned_MultiMapping" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/Unassigned_MultiMapping.txt; \
+grep "Unassigned_NoFeatures" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/Unassigned_NoFeatures.txt; \
+grep "Unassigned_Unmapped" $file | perl -p -e 's/\w*\s*(\d*)/$1/' >> \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/Unassigned_Unmapped.txt; \
+paste filename.txt Assigned.txt Unassigned_Ambiguity.txt \
+Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt Unassigned_Unmapped.txt \
+> $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/featureCounts.txt; \
+done
 
-# Collect all read counts files for transfer on desktop computer
-mkdir -p $HOME/scratch/miRNAseqTimeCourse/Counts/Novo-feature/mature_miRNA/ $HOME/scratch/miRNAseqTimeCourse/Counts/Novo-feature/pre_miRNA
-cd $HOME/scratch/miRNAseqTimeCourse/Counts/Novo-feature/
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA -name *.summary`; do outfile=`basename $file | perl -p -e 's/\.summary//'`; cp $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/mature_miRNA/$outfile/$outfile $HOME/scratch/miRNAseqTimeCourse/Counts/Novo-feature/mature_miRNA/$outfile; done;
-for file in `find $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA -name *.summary`; do outfile=`basename $file | perl -p -e 's/.summary//'`; cp $HOME/scratch/miRNAseqTimeCourse/Novo-feature/count_summarisation/pre_miRNA/$outfile/$outfile $HOME/scratch/miRNAseqTimeCourse/Counts/Novo-feature/pre_miRNA/$outfile; done;
+echo -e "Sample\tAssigned reads\tUnassigned ambiguous reads\tUnassigned \
+multi mapping reads\tUnassigned no features reads\tUnassigned unmapped reads" \
+| cat - $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/featureCounts.txt \
+> $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/mature_miRNA-Gene_count_stats.txt
 
+rm -f filename.txt Assigned.txt Unassigned_Ambiguity.txt \
+Unassigned_MultiMapping.txt Unassigned_NoFeatures.txt \
+Unassigned_Unmapped.txt featureCounts.txt
+
+# Collect all read counts files for transfer to laptop using WinSCP:
+mkdir $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/tmp
+for file in \
+`find $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA \
+-name *-counts.txt`; \
+do cp $file -t \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/tmp; \
+done
+
+mkdir $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/tmp
+for file in \
+`find $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA \
+-name *-counts.txt`; \
+do cp $file -t \
+$HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/tmp; \
+done
+
+# Remove temporary folders after transfering files to laptop:
+rm -r $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/tmp
+rm -r $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/tmp
 
 #########################################
 # Compress all SAM files into BAM files #
 #########################################
 
-# Go to working directory
-cd $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/
+# Required software is Samtools v1.3.1. For more information visit:
+# http://www.htslib.org/
 
-# Compress all SAM files into BAM files
-for file in `ls $HOME/scratch/miRNAseqTimeCourse/Novo-feature/alignment/*.sam`; do sample=`basename $file | perl -p -e 's/\.sam//'`; echo "samtools view -bhS $file | samtools sort - ${sample}; rm -f $file" >> sam_to_bam.sh; done;
+# Go to working directory:
+cd $HOME/scratch/miRNAseqValidation/Novo-feature/alignment
 
-# Run script on Stampede
-for script in `ls sam_to_bam.sh`
+# Create bash script to compress all SAM files into BAM files:
+for file in \
+`ls $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/*.sam`; \
+do sample=`basename $file | perl -p -e 's/(E\d+)\.sam/$1/'`; \
+echo "samtools view -bS $file > ${sample}.bam" >> sam_to_bam.sh; \
+done
+
+# Split and run all scripts on Stampede:
+split -d -l 8 sam_to_bam.sh sam_to_bam.sh.
+for script in `ls sam_to_bam.sh.*`
 do
 chmod 755 $script
 nohup ./$script > ${script}_nohup &
 done
 
-# Perform subsequent miRNA analyses in R, follow R pipelines
+# Check BAM files:
+for file in `ls $HOME/scratch/miRNAseqValidation/Novo-feature/alignment/*.bam`; \
+do echo samtools quickcheck -v $file > \
+bad_bams.fofn && echo 'all ok' || echo 'some files failed check, see bad_bams.fofn'; \
+done
+
+# Once sure that the BAM files are correct, remove all SAM files:
+rm -r *.sam
+
+########################################
+# R analysis of gene counts with edgeR #
+########################################
+
+# Subsequent sense genes analyses were performed using the R statistical
+# and the edgeR package. Please refer to file: BioValidation-miRNA_Method-1.R
 
