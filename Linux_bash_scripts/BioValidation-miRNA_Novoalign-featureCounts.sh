@@ -174,6 +174,61 @@ reads\tPercentage unmapped reads\tToo short reads\tPercentage too short reads" \
 rm -r filename.txt inputread.txt unique.txt multi.txt \
 unmapped.txt fail.txt novoalign.txt
 
+#############################################
+# FastQC quality check of aligned SAM files #
+#############################################
+
+# Required software is FastQC v0.11.5, consult manual/tutorial
+# for details: http://www.bioinformatics.babraham.ac.uk/projects/fastqc/
+
+# Create and enter working directory:
+mkdir $HOME/scratch/miRNAseqValidation/quality_check/post-alignment
+cd !$
+
+# Run FastQC in one file to see if it's working well:
+fastqc -o $HOME/scratch/miRNAseqValidation/quality_check/post-alignment \
+--noextract --nogroup -t 3 \
+$HOME/scratch/miRNAseqValidation/Novo-feature/alignment/E10.sam
+
+# Create bash script to perform FastQC quality check on all SAM files:
+for file in `find $HOME/scratch/miRNAseqValidation/Novo-feature/alignment \
+-name *.bam`; do echo "fastqc --noextract --nogroup -t 2 \
+-o $HOME/scratch/miRNAseqValidation/quality_check/post-alignment $file" \
+>> fastqc_post-alignment.sh; \
+done
+
+# Run script on Stampede:
+chmod 755 fastqc_post-alignment.sh
+nohup ./fastqc_post-alignment.sh > fastqc_post-alignment.sh.nohup &
+
+# Check if all the files were processed:
+more fastqc_post-alignment.sh.nohup | grep "Failed to process file" \
+>> failed_fastqc.txt
+
+# Deleted all the HTML files:
+rm -r *.html
+
+# Check all output from FastQC:
+mkdir tmp
+
+for file in `ls *_fastqc.zip`; do unzip \
+$file -d \
+$HOME/scratch/miRNAseqValidation/quality_check/post-alignment/tmp; \
+done
+
+for file in \
+`find $HOME/scratch/miRNAseqValidation/quality_check/post-alignment/tmp \
+-name summary.txt`; do more $file >> reports_merged.txt; \
+done
+
+for file in \
+`find $HOME/scratch/miRNAseqValidation/quality_check/post-alignment/tmp \
+-name fastqc_data.txt`; do head -n 10 $file >> basic_stats_merged.txt; \
+done
+
+# Remove temporary folder and its files:
+rm -r tmp
+
 ##########################################
 # Count summarisation with featureCounts #
 ##########################################
@@ -322,6 +377,11 @@ done
 # Remove temporary folders after transfering files to laptop:
 rm -r $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/pre_miRNA/tmp
 rm -r $HOME/scratch/miRNAseqValidation/Novo-feature/count_summarisation/mature_miRNA/tmp
+
+# Remove temporary folder that contain merged FASTQ files after a successfull
+# count summarisation:
+cd $HOME/scratch/miRNAseqValidation/fastq_sequence
+rm -r tmp
 
 #########################################
 # Compress all SAM files into BAM files #
