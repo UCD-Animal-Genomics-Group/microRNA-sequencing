@@ -147,41 +147,151 @@ chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
 
+# Collect all read counts files from regular and high confidence miRNAs for
+# transfering into laptop using WinSCP:
+mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/regular
+cd !$
+for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/quantifier/E* \
+-name miRNAs_expressed_all_samples*.csv`; \
+do outfile=`echo $file | perl -p -e 's/^.*quantifier\/(.*)\/.*$/$1/'`; \
+cp $file \
+$HOME/scratch/miRNAseqValidation/Counts/mirdeep2/regular/${outfile}_expressed.csv; \
+done
+
+mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/high_conf
+cd !$
+for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/quantifier/high_confidence/E* \
+-name miRNAs_expressed_all_samples*.csv`; \
+do outfile=`echo $file | perl -p -e 's/^.*quantifier\/.*\/(.*)\/.*$/$1/'`; \
+cp $file \
+$HOME/scratch/miRNAseqValidation/Counts/mirdeep2/high_conf/${outfile}_expressed_high_conf.csv; \
+done
+
 ########################################################################
 # Identification of known and novel miRNAs using miRDeep2: miRDeep2.pl #
 ######################################################################## 
 
-# Create and enter the miRdeep2 directory for miRdeep discovery work
-mkdir -p $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep
+# Create and enter working directory:
+mkdir $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep
 cd !$
 
-# Copy and modify the required fasta files since miRdeep2 software requires no space in headers
-cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/source_file/Btau_UMD3.1_multi.fa ./Btau_UMD3.1_multi.fa
-cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_mature-miRNA.fa ./Btau_mature-miRNA.fa
-cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Other_mature-miRNA.fa ./Other_mature-miRNA.fa
-cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/annotation_file/Btau_pre-miRNA.fa ./Btau_pre-miRNA.fa
-perl -p -i -e 's/^(>.*?)\s.*$/$1/' $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Btau_UMD3.1_multi.fa
-perl -p -i -e 's/^(>.*?) (.*?) .*$/$1_$2/' $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Btau_mature-miRNA.fa
-perl -p -i -e 's/^(>.*?) (.*?) .*$/$1_$2/' $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Other_mature-miRNA.fa
-perl -p -i -e 's/^(>.*?) (.*?) .*$/$1_$2/' $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Btau_pre-miRNA.fa
+# Copy and modify the required fasta files since miRdeep2 software
+# requires no space in headers and no characters other than acgtunACGTUN in
+# the sequences:
+cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/source_file/Btau_UMD3.1_multi.fa \
+./Btau_UMD3.1_multi.fa
+cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/bta_mature-miRNA.fa \
+./bta_mature-miRNA.fa
+cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/high_conf_mature.fa \
+./high_conf_mature.fa
+cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/other_mature-miRNA.fa \
+./other_mature-miRNA.fa
+cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/bta_hairpin-miRNA.fa \
+./bta_hairpin-miRNA.fa
+cp /workspace/storage/genomes/bostaurus/UMD3.1_NCBI/miRBase_fasta/high_conf_hairpin.fa \
+./high_conf_hairpin.fa
 
-# Create a shell script for identification and quantification of known and novel miRNAs
-for file in `ls $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mapper/*_collapsed.fa`; do outfile=`basename $file | perl -p -e 's/_collapsed.fa//'`; echo "mkdir -p $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/$outfile; cd $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/$outfile; miRDeep2.pl $file $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Btau_UMD3.1_multi.fa $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mapper/${outfile}.arf $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Btau_mature-miRNA.fa $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Other_mature-miRNA.fa $HOME/scratch/miRNAseqTimeCourse/mirdeep2/mirdeep/Btau_pre-miRNA.fa -t Cow" >> miRdeep2.sh; done;
+perl -p -i -e 's/^(>.*?)\s.*$/$1/' \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/Btau_UMD3.1_multi.fa
+perl -p -i -e 's/^(>.*?) (.*?) .*$/$1_$2/' \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/bta_mature-miRNA.fa
+perl -p -i -e 's/^(>.*?) (.*$)/$1_$2/' \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_conf_mature.fa
+perl -p -i -e 's/^(>.*?) (.*?) .*$/$1_$2/' \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/other_mature-miRNA.fa
+perl -p -i -e 's/^(>.*?) (.*?) .*$/$1_$2/' \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/bta_hairpin-miRNA.fa
+perl -p -i -e 's/^(>.*?) (.*?) (.*?) (.*?) (.*?) .*$/$1_$2/' \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_conf_hairpin.fa
+sed -e '/^[^>]/s/[^ATGCatgc]/N/g' high_conf_hairpin.fa > high_conf_hairpin_clean.fa
 
-# Split and run all scripts on Stampede
-split -d -l 7 miRdeep2.sh miRdeep2.sh.
+# Run mirdeep.pl in one FASTA file to see if it's working well:
+miRDeep2.pl $HOME/scratch/miRNAseqValidation/mirdeep2/mapper/E10_collapsed.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/Btau_UMD3.1_multi.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mapper/E10.arf \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/bta_mature-miRNA.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/other_mature-miRNA.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/bta_hairpin-miRNA.fa -t Cow
+
+# Create bash script for identification and quantification of known and
+# novel miRNAs:
+for file in \
+`ls $HOME/scratch/miRNAseqValidation/mirdeep2/mapper/*_collapsed.fa`; \
+do outfile=`basename $file | perl -p -e 's/_collapsed.fa//'`; \
+echo "mkdir $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/$outfile; \
+cd $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/$outfile; \
+miRDeep2.pl $file \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/Btau_UMD3.1_multi.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mapper/${outfile}.arf \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/bta_mature-miRNA.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/other_mature-miRNA.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/bta_hairpin-miRNA.fa -t Cow" \
+>> miRdeep2.sh; \
+done
+
+# Split and run all scripts on Stampede:
+split -d -l 8 miRdeep2.sh miRdeep2.sh.
 for script in `ls miRdeep2.sh.*`
 do
 chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
 
-# Collect all read counts files for transfer on desktop computer
-mkdir -p $HOME/scratch/miRNAseqTimeCourse/Counts/mirdeep2/ 
+# Create and enter the working directory for high confidence seqs from miRBase:
+mkdir $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_confidence
 cd !$
-for file in `find $HOME/scratch/miRNAseqTimeCourse/mirdeep2/quantifier -name miRNAs_expressed_all_samples*`; do outfile=`echo $file | perl -p -e 's/^.*quantifier\/(.*)\/.*$/$1/'`; cp $file $HOME/scratch/miRNAseqTimeCourse/Counts/mirdeep2/${outfile}_expressed.csv; done;
 
+# Create bash script for identification and quantification of
+# high confidence miRNAs:
+for file in \
+`ls $HOME/scratch/miRNAseqValidation/mirdeep2/mapper/*_collapsed.fa`; \
+do outfile=`basename $file | perl -p -e 's/_collapsed.fa//'`; \
+echo \
+"mkdir $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_confidence/$outfile; \
+cd $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_confidence/$outfile; \
+miRDeep2.pl $file \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/Btau_UMD3.1_multi.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mapper/${outfile}.arf \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_conf_mature.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/other_mature-miRNA.fa \
+$HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_conf_hairpin_clean.fa \
+-t Cow" \
+>> miRdeep2_high-conf.sh; \
+done
 
+# Split and run all scripts on Stampede:
+split -d -l 8 miRdeep2_high-conf.sh miRdeep2_high-conf.sh.
+for script in `ls miRdeep2_high-conf.sh.*`
+do
+chmod 755 $script
+nohup ./$script > ${script}.nohup &
+done
 
-# Perform subsequent miRNA analyses in R, follow R pipelines
+# Collect all read counts files from regular and high confidence miRNAs for
+# transfering into laptop using WinSCP:
+mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/mirdeep.pl/regular
+cd !$
+for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/E* \
+-name miRNAs_expressed_all_samples*.csv`; \
+do outfile=`echo $file | perl -p -e 's/^.*mirdeep\/(.*)\/.*$/$1/'`; \
+cp $file \
+$HOME/scratch/miRNAseqValidation/Counts/mirdeep2/mirdeep.pl/regular/${outfile}_exp_mirdeep.csv; \
+done
+
+mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/high_conf
+cd !$
+for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_confidence/E* \
+-name miRNAs_expressed_all_samples*.csv`; \
+do outfile=`echo $file | perl -p -e 's/^.*mirdeep\/.*\/(.*)\/.*$/$1/'`; \
+cp $file \
+$HOME/scratch/miRNAseqValidation/Counts/mirdeep2/mirdeep.pl/high_conf/${outfile}_exp_mirdeep_hc.csv; \
+done
+
+########################################
+# R analysis of gene counts with edgeR #
+########################################
+
+# Subsequent sense genes analyses were performed using the R statistical
+# and the edgeR package. Please refer to file:
+# BioValidation-miRNAseq_edgeR_pipeline.R
 

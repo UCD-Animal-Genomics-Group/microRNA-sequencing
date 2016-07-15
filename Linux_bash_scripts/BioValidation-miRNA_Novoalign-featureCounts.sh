@@ -422,5 +422,6 @@ rm -r *.sam
 ########################################
 
 # Subsequent sense genes analyses were performed using the R statistical
-# and the edgeR package. Please refer to file: BioValidation-miRNA_Method-1.R
+# and the edgeR package. Please refer to file:
+# BioValidation-miRNAseq_edgeR_pipeline.R
 
