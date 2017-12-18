@@ -3,7 +3,7 @@
 ### miRNA-seq data analysis of isomiR counts (paired data) ------------------
 
 
-# Analysis of 10 animals infected over a 15 weeks time course for which 
+# Analysis of 10 animals infected over a 15 weeks time course for which
 # miRNA-seq libraries where prepared from serum samples, and this analysis
 # focuses on isomiRs expression
 # Information regarding samples preparation can be found in LabBook number 68
@@ -11,37 +11,42 @@
 
 ### List of required packages -----------------------------------------------
 
-# Extract the User path to Dropbox
-user <- gsub(
-    pattern = "(^.*/Dropbox)/.*", replacement = "\\1",
-    x = getwd(), perl = TRUE)
+workDir <- getwd()
 
 # Source the user's general functions used across this script
-source(
-    file = paste(
-        user, "/Home_work_sync/Work/Bioinformatics/R/General_function.R",
-        sep = ""))
+source(file = paste("General_function.R", sep = ""))
 
 # Load the required packages (or install if not already in library)
-loadpackage(package = edgeR)
-loadpackage(package = MASS)
-loadpackage(package = ggplot2)
-loadpackage(package = PerformanceAnalytics)
-loadpackage(package = VennDiagram)
-loadpackage(package = reshape2)
-loadpackage(package = randomForest)
-loadpackage(package = gplots)
-loadpackage(package = RColorBrewer)
-loadpackage(package = magrittr)
-loadpackage(package = gridExtra)
-loadpackage(package = plyr)
+library(edgeR)
+library(tidyverse)
+library(devtools)
+library(magrittr)
+library(stringr)
+library(forcats)
+library(MASS)
+library(biobroom)
+library(ggjoy)
+library(PerformanceAnalytics)
+library(RColorBrewer)
+library(grid)
+library(gridExtra)
+library(reshape2)
+library(gplots)
+library(ggrepel)
+library(cowplot)
+library(Cairo)
+library(VennDiagram)
+
+
+install.packages("PerformanceAnalytics")
+install.packages("gplots")
 
 
 ### Gene annotation using information obtained from GTF file ----------------
 
 # Read in the annotation information
-miRNA.info <- read.table(
-    file = "../miRNA_Btaurus.txt", header = TRUE, sep = "\t", quote = "")
+miRNA.info <- read.table(file = "miRNA_Btaurus.txt", header = TRUE,
+                         sep = "\t", quote = "")
 
 # Determine which miRNA have identical mature sequence
 miRNA.duplicate <- aggregate(
@@ -70,36 +75,33 @@ save(miRNA.info, file = "miRNA_info.RData", compress = TRUE)
 
 # Define a set of files containing isomiR counts to process
 files <- list.files(
-    path = paste(
-        user, "/Home_work_sync/Work/TIDA/miRNA-seq/Results",
-        "/Sequencing_depth/isomiR_counts",
-        sep = ""),
+    path = paste(workDir, "/isomiR_counts", sep = ""),
     pattern = "6",
     full.names = TRUE)
 
 # Use a loop to read all the isomiR count file
 for (i in 1:length(files)) {
-    
+
     # Read in the current file and keep only the sequence and count columns
     Dat <- read.table(
         file = files[i], quote = "\"", sep = "\t",
         header = TRUE, stringsAsFactors = FALSE)
-    
+
     # Rename the matching pri-miRNA information column
     colnames(Dat)[3] <- c("primiRNA")
-    
+
     # Collect the library name from the file name
     lib <- gsub(
         pattern = "^.*\\/(6\\d+.*)_isomiR.txt$", replacement = "\\1_",
         x = files[i], perl = TRUE)
-    
+
     # Rename the pri-miRNA information and count columns with library name
     colnames(Dat)[3:4] <- gsub(
         pattern = "^", replacement = lib, x = colnames(Dat)[3:4], perl = TRUE)
-    
+
     # Transform all sequence to uppercase (for merging compatibility)
     Dat$Sequence <- toupper(x = Dat$Sequence)
-    
+
     # For the first ocurence of i define the count variable that will
     # store all files isomiR counts
     if (i == 1) {
@@ -110,7 +112,7 @@ for (i in 1:length(files)) {
     else {
         Count <- merge(x = Count, y = Dat[, -1], by = "Sequence", all = TRUE)
     }
-    
+
 }
 
 # Add a rownames containing unique ID to the count variable
@@ -198,7 +200,8 @@ save(Count.annot, file = "All_count_annotated.RData", compress = TRUE)
 
 
 # Merge the annotation information with the count table
-Count <- merge(x = miRNA.info, y = Count, by = "gene_id", all = TRUE)
+Count <- merge(x = miRNA.info, y = Count, by.x = c("gene_id"),
+               by.y = c("isomiR_ID"), all = TRUE)
 head(Count)
 
 # Check the merged matrix in terms of size and content
@@ -279,7 +282,7 @@ count.log2 <- log(x = (dgelist$counts[,]+1), base = 2)
 png(filename = paste(method, "_Dens_all_miRNA.png", sep = ""),
     width = 1500, height = 1300, units = "px")
 plot(
-    x = density(count.log2[, 1]), main = "Density plot of count per isomiR", 
+    x = density(count.log2[, 1]), main = "Density plot of count per isomiR",
     lty =  1, xlab = "Log2 of count per isomiR", ylab = "Density",
     col = 1, xlim = c(-0.5, 6), ylim = c(0.0, 1.0), lwd = 2 ,
     cex.axis = 1.5, cex.lab = 1.5, cex.main = 2
@@ -293,10 +296,10 @@ dev.off()
 ### Filtering of lowly expressed tags ------------------------------------
 
 # Identify genes with zero counts across all samples
-dim(dgelist[rowSums(dgelist$counts) == 0, ])
-head(dgelist[rowSums(dgelist$counts) == 0, ])
+dim(dgelist$counts[rowSums(dgelist$counts) == 0, ])
+head(dgelist$counts[rowSums(dgelist$counts) == 0, ])
 
-# Filter lowly expressed tags, retaining only tags with at least 50 counts per 
+# Filter lowly expressed tags, retaining only tags with at least 50 counts per
 # million in 10 or more libraries (10 libraries correspond to one time point)
 dgelist.filt <- dgelist[rowSums(
     cpm(dgelist$counts) > 50) >= median(summary(dgelist$samples$group)), ]
@@ -317,9 +320,9 @@ count.log2 <- log(x = (dgelist.filt$counts[,] + 1), base = 2)
 png(filename = paste(method, "_Dens_filt_miRNA.png", sep = ""),
     width = 1366, height = 768, units = "px")
 plot(
-    x = density(count.log2[, 1]), main = "Density plot of count per isomiR", 
-    lty =  1, xlab = "Log2 of count per isomiR", ylab = "Density", col = 1, 
-    xlim = c(-0.5, 15), ylim = c(0.0, 1.0), lwd = 2 , cex.axis = 1.5, 
+    x = density(count.log2[, 1]), main = "Density plot of count per isomiR",
+    lty =  1, xlab = "Log2 of count per isomiR", ylab = "Density", col = 1,
+    xlim = c(-0.5, 15), ylim = c(0.0, 1.0), lwd = 2 , cex.axis = 1.5,
     cex.lab = 1.5, cex.main = 2
     )
 for (i in 2:ncol(count.log2)) {
@@ -328,71 +331,9 @@ for (i in 2:ncol(count.log2)) {
 dev.off()
 
 
-### Histogram of CPM per expression category -----------------------------
-
-# Prepare the histogram picture output
-png(filename = paste(method, "_Hist_miRNA.png", sep = ""),
-    width = 1500, height = 1500, units = "px")
-par(mfrow = c(2,2), cex = 3, cex.axis = 0.7)
-
-# Plot histogram of number of gene per CPM category for all microRNA
-hist_plot <- hist(
-    x = rowMeans(x = cpm(dgelist$counts), na.rm = FALSE),
-    breaks = c(0, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
-    plot = FALSE)
-plot(
-    x = hist_plot$counts, log = "x", type = "h", axes = FALSE, 
-    xlab = "Average CPM", ylab = "Number of gene", lwd = 10, 
-    col = "lightblue", main = "All miRNA")
-axis(
-    side = 1, at = c(1:10),
-    labels = c(
-        "0", "0.01", "0.1", "1", "10", "100", "1000",
-        "10000", "100000", "1000000"))
-axis(side = 2)
-
-# Plot histogram of number of gene per CPM category for microRNA with 
-# at least one count
-hist_plot <- hist(
-    x = rowMeans(
-        x = cpm(dgelist$counts[rowSums(dgelist$counts) > 0, ]), na.rm = FALSE),
-    breaks = c(0, 0.01, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000),
-    plot = FALSE)
-plot(
-    x = hist_plot$counts, log = "x", type = "h", axes = FALSE, 
-    xlab = "Average CPM", ylab = "Number of gene", lwd = 10, 
-    col = "lightgreen", main = "Min one count miRNA")
-axis(
-    side = 1, at = c(1:10),
-    labels = c(
-        "0", "0.01", "0.1", "1", "10", "100", "1000",
-        "10000", "100000", "1000000"))
-axis(side = 2)
-
-# Plot histogram of number of gene per CPM category for microRNA 
-# filtered for low expression
-hist_plot <- hist(
-    x = rowMeans(x = cpm(dgelist.filt$counts), na.rm = FALSE),
-    breaks = c(0, 0.1, 1, 10, 100, 1000, 10000, 100000, 1000000), 
-    plot = FALSE)
-plot(
-    x = hist_plot$counts, log = "x", type = "h", axes = FALSE, 
-    xlab = "Average CPM", ylab = "Number of gene", lwd = 10, 
-    col = "lightcoral", main = "Low expression filtered miRNA")
-axis(
-    side = 1, at = c(1:10), 
-    labels = c(
-        "0", "0.01", "0.1", "1", "10", "100", "1000",
-        "10000", "100000", "1000000"))
-axis(side = 2)
-
-# Close graphic device
-dev.off()
-
-
 ### Gene expression correlation between libraries ------------------------
 
-# Perform gene expression correlation between libraries at each time points to 
+# Perform gene expression correlation between libraries at each time points to
 # identify potential outlier library (CPM values not required with Spearman)
 for (val in levels(time.point)) {
     png(filename = paste(method, val, "cor.png", sep = "_"),
@@ -410,7 +351,7 @@ for (val in levels(time.point)) {
 
 ### Normalization of data using trimmed mean of M-values -----------------
 
-# Calculate normalisation factor for our DGElist, note that with edgeR 
+# Calculate normalisation factor for our DGElist, note that with edgeR
 # the counts are not transformed in any way after normalization
 dgelist.norm <- calcNormFactors(dgelist.filt)
 dgelist.norm$samples
@@ -418,44 +359,155 @@ dgelist.norm$samples
 
 ### Multidimensional scaling plot of all samples -------------------------
 
-# Define a set of colors
-colours <- brewer.pal(
-    n = length(levels(time.point)),
-    name = "Set1")
+# Define function for getting MDS coordinates
+getBCVcoord <- function(dgelst, time_pattrn) {
 
-# Use custom function to output a MDS plot of all samples
-multi.MDS(
-    data = dgelist.norm,
-    target = target[grep(
-        pattern = paste("^.*_", method, "$", sep = ""),
-        x = target[, c("sample")], perl = TRUE),],
-    prefix = method, suffix = "all",
-    plotmds = list(
-        top = 1000000, gene.selection = "pairwise",
-        dim.plot = c(1, 2)),
-    aes.colour = "time_point", fill = "lightgrey", size = 3,
-    legend.pos = "right", manual.colour = colours, breaks = levels(time.point))
+  mds <- plotMDS.DGEList(x = dgelst[ , grepl(paste(time_pattrn,
+                                                   collapse = "|"),
+                                             x = colnames(dgelst))],
+                         plot = FALSE,
+                         method = "bcv")
+
+  mds_coord <- mds$cmdscale.out # Get coords to plot with ggplot2
+
+  mds_coord %<>% # Tidy coords
+    tidy() %>%
+    dplyr::rename(sample = .rownames, x = X1, y = X2) %>%
+    dplyr::mutate(animal = sample, group = sample)
+
+  mds_coord$animal %<>% # Clean animal IDs for plotting
+    str_replace(paste(time_pattrn,
+                      collapse = "|"), "") %>%
+    factor()
+
+  mds_coord$group %<>% # Clean group info for plotting
+    str_replace("\\d\\d\\d\\d_", "") %>%
+    fct_rev()
+
+  return(mds_coord)
+
+}
+
+# Get tidy MDS coordinates for each time point with both controls
+
+## +1 wk and controls
+W1_coord <- getBCVcoord(dgelist.norm, c("_pre2", "_pre1", "_1_"))
+
+## +2 wk and controls
+W2_coord <- getBCVcoord(dgelist.norm, c("_pre2", "_pre1", "_2"))
+
+## +6 wk and controls
+W6_coord <- getBCVcoord(dgelist.norm, c("_pre2", "_pre1", "_6"))
+
+## +10 wk and controls
+W10_coord <- getBCVcoord(dgelist.norm, c("_pre2", "_pre1", "_10"))
+
+## +12 wk and controls
+W12_coord <- getBCVcoord(dgelist.norm, c("_pre2", "_pre1", "_12"))
 
 
-### Multidimensional scaling plot per time points ------------------------
+# Plot +1 wk MDS
+MDS_W1 <- ggplot(W1_coord) +
+  geom_point(aes(x = x, y = y,
+                 colour = group,
+                 shape  = group),
+             size = 3) +
+  scale_colour_manual("Treatment",
+                      values = c("#b2b2b2", "#b2b2b2", "#e06377")) +
+  scale_shape_manual("Treatment",
+                     values = c(19, 17, 15)) +
+  geom_text_repel(aes(x = x, y = y, label = animal)) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle("+1 wk") +
+  xlab("BCV distance 1") +
+  ylab("BCV distance 2")
 
-# Use custom function to output a MDS plot per post-infection time points
-multi.MDS(
-    pattern = c(
-        "_pre2_|_pre1_|_1_", "_pre2_|_pre1_|_2_", "_pre2_|_pre1_|_6_",
-        "_pre2_|_pre1_|_10_", "_pre2_|_pre1_|_12_"),
-    data = dgelist.norm,
-    target = target[grep(
-        pattern = paste("^.*_", method, "$", sep = ""),
-        x = target[, c("sample")], perl = TRUE),],
-    prefix = method,
-    suffix = c("W1", "W2", "W6", "W10", "W12"), 
-    plotmds = list(
-        top = 1000000, gene.selection = "pairwise", dim.plot = c(1, 2)),
-    aes.colour = "time_point", fill = "wheat", size = 3, legend.pos = "right",
-    combine = TRUE, manual.colour = colours[c(2, 3, rep(x = 1, times = 5))], 
-    breaks = levels(time.point))
+# Plot +2 wk MDS
+MDS_W2 <- ggplot(W2_coord) +
+  geom_point(aes(x = x, y = y,
+                 colour = group,
+                 shape  = group),
+             size = 3) +
+  scale_colour_manual("Treatment",
+                      values = c("#b2b2b2", "#b2b2b2", "#e06377")) +
+  scale_shape_manual("Treatment",
+                     values = c(19, 17, 15)) +
+  geom_text_repel(aes(x = x, y = y, label = animal)) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle("+2 wk") +
+  xlab("BCV distance 1") +
+  ylab("BCV distance 2")
 
+# Plot +6 wk MDS
+MDS_W6 <- ggplot(W6_coord) +
+  geom_point(aes(x = x, y = y,
+                 colour = group,
+                 shape  = group),
+             size = 3) +
+  scale_colour_manual("Treatment",
+                      values = c("#b2b2b2", "#b2b2b2", "#e06377")) +
+  scale_shape_manual("Treatment",
+                     values = c(19, 17, 15)) +
+  geom_text_repel(aes(x = x, y = y, label = animal)) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle("+6 wk") +
+  xlab("BCV distance 1") +
+  ylab("BCV distance 2")
+
+# Plot +10 wk MDS
+MDS_W10 <- ggplot(W10_coord) +
+  geom_point(aes(x = x, y = y,
+                 colour = group,
+                 shape  = group),
+             size = 3) +
+  scale_colour_manual("Treatment",
+                      values = c("#b2b2b2", "#b2b2b2", "#e06377")) +
+  scale_shape_manual("Treatment",
+                     values = c(19, 17, 15)) +
+  geom_text_repel(aes(x = x, y = y, label = animal)) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle("+10 wk") +
+  xlab("BCV distance 1") +
+  ylab("BCV distance 2")
+
+# Plot +12 wk MDS
+MDS_W12 <- ggplot(W12_coord) +
+  geom_point(aes(x = x, y = y,
+                 colour = group,
+                 shape  = group),
+             size = 3) +
+  scale_colour_manual("Treatment",
+                      values = c("#b2b2b2", "#b2b2b2", "#e06377")) +
+  scale_shape_manual("Treatment",
+                     values = c(19, 17, 15)) +
+  geom_text_repel(aes(x = x, y = y, label = animal)) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle("+12 wk") +
+  xlab("BCV distance 1") +
+  ylab("BCV distance 2")
+
+### Combine all MDS plots into single figure
+
+# Set grid
+MDS_grid <- plot_grid(MDS_W1, MDS_W2, MDS_W6,
+                      MDS_W10, MDS_W12,
+                      labels = c("A", "B", "C", "D", "E"),
+                      ncol = 2,
+                      scale = .96)
+
+# Check plot
+MDS_grid
+
+# Export high quality image
+ggsave(filename  = paste(method, "_MDS_grid.pdf", sep = ""),
+       plot      = MDS_grid,
+       device    = cairo_pdf,
+       path      = workDir,
+       limitsize = FALSE,
+       dpi       = 300,
+       height    = 20,
+       width     = 18,
+       units     = "in")
 
 ### Create a design matrix for paired analysis ---------------------------
 
@@ -571,14 +623,6 @@ write.matrix(
     x = DEtable, file = paste(method, "_full_DE.txt", sep = ""), sep = "\t")
 
 
-### Plot the number of differentially expressed genes --------------------
-
-# Plot the number of differentially expressed genes per comparisons
-plot.numb.DE(
-    data = DEtable, comparison = c("1w", "2w", "6w", "10w", "12w"),
-    filename = paste(method, "_DE.tif", sep = ""))
-
-
 ### Comparison of DE genes between time points ---------------------------
 
 # Identify as a vector list the significant DE genes per time point
@@ -594,6 +638,11 @@ overlap <- eval(parse(text = paste("overlap", method, sep = ".")))
 
 
 ### Clustering of samples based on common DE genes -----------------------
+
+# Define a set of colors
+colours <- brewer.pal(
+  n = length(levels(time.point)),
+  name = "Set1")
 
 # Get the CPM values for each filtered miRNA
 CPM <- cpm(x = dgelist.disp, normalized.lib.sizes = TRUE)
@@ -647,112 +696,10 @@ heatmap.2(
 dev.off()
 
 
-### Biomarkers discovery using Random Forest method ----------------------
-
-# Use randomForest on the CPM values per miRNA
-rf <- randomForest(
-    x = t(CPM), y = pheno, importance = TRUE, replace = TRUE, do.trace = FALSE,
-    ntree = 5000, mtry = sqrt(nrow(CPM)), keep.forest = TRUE, proximity = TRUE)
-
-# Order the miRNA by their importance value
-rf.ImportanceOrdered <- importance(rf)[order(
-    importance(rf)[, "MeanDecreaseGini"], decreasing = TRUE),]
-head(rf.ImportanceOrdered, n = 20)
-
-# Create a MDS plot
-MDSplot(rf = rf, fac = pheno, palette = c(1,3))
-
-# Represent the data in a heatmap based on the top miRNA (by importance)
-for (n in 2:15) {
-    tiff(
-        filename = paste(method, "_Heatmap_n", n, ".tif", sep = ""),
-        width = 15, height = 15, units = "in", res = 600, compression = "lzw")
-    dat <- CPM[head(rownames(rf.ImportanceOrdered), n = n),]
-    heatmap.2(
-        x = dat, labRow = rownames(dat), labCol = colnames(dat),
-        cexRow = .5, cexCol = .5, breaks = colors, col = my.palette,
-        symm = F, symkey = F, symbreaks = T, scale = "none",
-        ColSideColors = col.side)
-    dev.off()
-}
-
-
-### Additional differential expression calls -----------------------------
-
-# Perform all differential expression analysis within a for loop
-time <- levels(time.point)
-for (i in time) {
-    print("Performing comparison versus:")
-    print(i)
-    DEtable.name <- c()
-    for (j in 1:length(time)) {
-        if (time[j] != i) {
-            # Test for differential expression for comparison
-            name <- paste(time[j], "wvs", i, "w", sep = "")
-            DEtable.name <- c(DEtable.name, name)
-            multi.DE(
-                time[j], 1, i, -1, data = dgeglm.fit, design = design,
-                group = time.point.sub, adjpvalue = 0.05, method = "BH",
-                dedata = paste("de", method, name, sep = '.'))
-        }
-        else {
-            next
-        }
-    }
-    # Create a vector of DE table to merge
-    DEtable.method <- DEtable.name %>%
-        lapply(X = ., FUN = function(x) paste("de", method, x, sep = '.')) %>%
-        unlist(.)
-    # Merge all DE table for the different time points into a single dataframe
-    DEtable.merge(
-        DEtable.method, output = paste("DE.vs.", i, "w.", method, sep = ""),
-        pattern = paste("^", "de.", method, '.', sep = ""))
-    # Create a variable containing the current DEtable
-    DEtable <- eval(
-        expr = parse(text = paste("DE.vs.", i, "w.", method, sep = "")),
-        envir = .GlobalEnv)
-    colnames(DEtable)
-    # Write into a table the full DE call data
-    write.matrix(
-        x = DEtable, file = paste(method, "_DE_vs", i, "w.txt", sep = ""),
-        sep = "\t")
-    # Plot the number of differentially expressed genes per comparisons
-    plot.numb.DE(
-        data = DEtable, comparison = DEtable.name,
-        pattern = "vs", replace = " vs ",
-        filename = paste(method, "_DE_vs", i, "w.tif", sep = ""))
-    # Comparison of DE genes between time points
-    # Identify as a vector list the significant DE genes per time point
-    venn.de(
-        data = DEtable, comparison = DEtable.name[-1],
-        pattern = "vs", replace = " vs ",
-        picname = paste(method, "_Venn_vs", i, "w", sep = ""),
-        overlapname = paste("overlap.vs", i, "w.", method, sep = ""),
-        lwd = 0.7, cex = 1, cat.cex = 1)
-}
-
-# Rename the files containing overlapping list of isomiRs between time points
-list.files(pattern = "^overlap.*.txt$") %>%
-    lapply(
-        X = .,
-        FUN = function(y) {
-            file.rename(
-                from = y,
-                to = gsub(
-                    pattern = "\\.(vs.+?)", replacement = "_\\1", x = y) %>%
-                    gsub(
-                        pattern = "^(.+)\\.(.+?)(\\.txt)$",
-                        replacement = "\\2_\\1\\3", x = .))
-            }
-        )
-
-
 ### Comparison of Exiqon PCR results with miRNA-seq results -----------------
 
 # Read in the file containing PCR results from Kirsten
-PCR.Kirsten <- read.table(file = paste(
-    user, "/Home_work_sync/Work/Colleagues shared work/Kirsten McLoughlin/",
-    "miRNA_work/PCR_data/PCR_to_compare.txt", sep = ""),
+PCR.Kirsten <- read.table(file = "PCR_to_compare.txt",
     header = TRUE, sep = "\t", quote = "", na.strings = '\'N/A\'')
 
 # Reformat Kirsten's PCR data
@@ -761,7 +708,7 @@ colnames(PCR.Kirsten) <- c(
     "hsapiens_gene_name", "sequence", "time_point",
     "fold_change_Kirsten", "FDR_Kirsten")
 PCR.Kirsten <- cbind(
-    PCR.Kirsten, 
+    PCR.Kirsten,
     logFC_Kirsten = as.matrix(as.numeric(lapply(
         X = PCR.Kirsten[, "fold_change_Kirsten"],
         FUN = function(i) {
@@ -774,9 +721,7 @@ head(PCR.Kirsten)
 
 # Read in the file containing biomarkers RT-qPCR results from Carol
 PCR.Carol <- read.table(
-    file = paste(
-        user, "/Home_work_sync/Work/TIDA/miRNA_PCR/Diff_expr/RT-qPCR_DE.txt",
-        sep = ""),
+    file = "RT-qPCR_DE.txt",
     sep = "\t", header = TRUE)
 PCR.Carol <- PCR.Carol[, c(3:5, 8, 16)]
 colnames(PCR.Carol) <- c(
@@ -870,12 +815,17 @@ save(
     file = paste(method, "_data.RData", sep = ""), compress = TRUE)
 
 
-### Clean up the R workspace ---------------------------------------------
+####################
+# Save .RData file #
+####################
 
-# Remove temporary and unrequired variables
-rm(list = setdiff(
-    x = ls(),
-    y = c("target", "animal", "depth", "dgelist.all", "method", "time.point")))
+save.image(file = paste(method, ".RData", sep = ""))
+
+#######################
+# Save R session info #
+#######################
+
+devtools::session_info()
 
 
 ### END ------------------------------------------------------------------
