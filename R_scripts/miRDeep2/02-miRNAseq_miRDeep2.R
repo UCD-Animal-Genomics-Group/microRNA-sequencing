@@ -1,7 +1,7 @@
 ##########################################################################
 # miRNA-seq analysis of a time course experimental infection in cattle   #
 #                                                                        #
-#            --- R workflow for the Novo-feature approach ---            #
+#              --- R workflow for the miRDeep2 approach ---              #
 #                                 Part 2                                 #
 ##########################################################################
 
@@ -114,7 +114,7 @@ ggplot(tidy_dgelist, aes(x = log10(count + 1),
   scale_fill_manual("Time point",
                     values = c("#b2b2b2", rep("#e06377", 6))) +
   theme_bw(base_size = 14, base_family = "Calibri") +
-  ggtitle("Density of filtered gene counts per sample (Novo-feature)") +
+  ggtitle(paste0("Density of filtered gene counts per sample (", method, ")")) +
   ylab("Time point_Animal number") +
   xlab(expression(paste(log[10], "(counts + 1)"))) -> density_filt
 
@@ -480,4 +480,4 @@ devtools::session_info()
 # Proceed to Part 3 of this analysis #
 ######################################
 
-# File: 03-miRNAseq_Novo-feature.R
+# File: 03-miRNAseq_miRDeep2.R

@@ -322,7 +322,7 @@ devtools::session_info()
 # Proceed to Part 2 of this analysis #
 ######################################
 
-# File: 02-miRNAseq_Novo-feature.R
+# File: 02-miRNAseq_miRDeep2.R
 
 
 

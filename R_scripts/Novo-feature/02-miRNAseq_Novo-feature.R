@@ -113,7 +113,7 @@ ggplot(tidy_dgelist, aes(x = log10(count + 1),
   scale_fill_manual("Time point",
                     values = c("#b2b2b2", rep("#e06377", 6))) +
   theme_bw(base_size = 14, base_family = "Calibri") +
-  ggtitle("Density of filtered gene counts per sample (Novo-feature)") +
+  ggtitle(paste0("Density of filtered gene counts per sample (", method, ")")) +
   ylab("Time point_Animal number") +
   xlab(expression(paste(log[10], "(counts + 1)"))) -> density_filt
 
