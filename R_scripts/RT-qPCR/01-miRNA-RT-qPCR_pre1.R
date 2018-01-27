@@ -1,46 +1,59 @@
-##########################################################
-# Differential expression analysis of miRNA RT-qPCR data #
-##########################################################
+################################################################
+#     miRNA RT-qPCR statistical analysis of a time course      #
+#             experimental infection in cattle                 #
+#                      Part 1 of 2:                            #
+#  -- all post-infection time points vs -1 wk pre-infection -- #
+################################################################
 
-# Analysis of 10 animals infected over a 15 weeks time course for which 
-# miRNA-seq libraries where prepared from PBMC samples and following which 
-# RT-qPCR technical validation was performed
+# Based on the workflow created by Nalpas, Nicolas and Correia, Carol (2015)
+# DOI badge: https://doi.org/10.5281/zenodo.16164
 
-#############################
-# List of required packages #
-#############################
+# Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
+# DOI badge of current version:
+# Last updated on 27/01/2018
 
-# Extract User path to Dropbox
-user <- gsub(pattern = "(^.*/Dropbox).*$", replacement = "\\1", x = getwd(),
-             perl = TRUE)
+############################################
+# 01 Load and/or install required packages #
+############################################
 
 # Source the common functions used across this script
-source(file = paste(user, "/Home_work_sync/Work/Bioinformatics/R",
-                    "/General_function.R", sep = ""))
+source(file = "General_function.R")
+
+# Define method
+method <- "pre1"
 
 # Load the required packages
-loadpackage(package = ggplot2)
-loadpackage(package = grid)
-loadpackage(package = VennDiagram)
-loadpackage(package = RColorBrewer)
-loadpackage(package = magrittr)
-loadpackage(package = gdata)
-loadpackage(package = psych)
+library(ggplot2)
+library(grid)
+library(RColorBrewer)
+library(magrittr)
+library(psych)
+library(readxl)
+library(readr)
+library(extrafont)
 
-################################
-# Read in input files within R #
-################################
+# Set time zone
+Sys.setenv(TZ = "Europe/London")
+
+# Register fonts with R for the PDF output device
+loadfonts()
+
+###################################
+# 02 Read in input files within R #
+###################################
 
 # Read in the excel RT-qPCR expression file
-PCR <- read.xls(xls = "cnrq_mean.xlsx", sheet = 1, row.names = 1,
-                header = TRUE, na.strings = "NaN")
+
+PCR <- data.frame(read_excel("cnrq_mean.xlsx",
+                             col_names = TRUE,
+                             na = "NaN"))
 
 # Clean up the column name in the qPCR dataset
 colnames(PCR) %<>% gsub(
   pattern = "(^X|^miR\\.|^miR)(\\d)", replacement = "miR\\2", x = .,
-  perl = TRUE) %>% gsub(pattern = "\\.SE.*", replacement = "_SE", x = ., 
+  perl = TRUE) %>% gsub(pattern = "\\.SE.*", replacement = "_SE", x = .,
                         perl = TRUE) %>% gsub(
-                          pattern = "\\.CNRQ.*", replacement = "_CNRQ", x = ., 
+                          pattern = "\\.CNRQ.*", replacement = "_CNRQ", x = .,
                           perl = TRUE) %>% gsub(
                             pattern = "^(hs|bt)a\\.", replacement = "", x = .,
                             perl = TRUE) %>% gsub(
@@ -49,19 +62,22 @@ colnames(PCR) %<>% gsub(
 head(PCR)
 
 # Read in and format the excel sample code name file
-sample <- read.xls(xls = "Sample_code.xlsx", sheet = 1, header = TRUE)
-colnames(sample) <- c("animal", "time_point", "sample_id")
+sample <- data.frame(read_excel("Sample_code.xlsx", col_names = TRUE))
+colnames(sample) <- c("animal", "time_point", "Samples")
 sample$time_point <- gsub(pattern = "-", replacement = "pre",
                           x = sample$time_point)
+head(sample)
 
 # Merge the sample information with the PCR data
-PCR.data <- as.data.frame(merge(x = sample, y = PCR, by.x = "sample_id",
-                                by.y = "row.names", all.x = TRUE))
+PCR.data <- as.data.frame(merge(x = sample, y = PCR, by.x = "Samples",
+                                by.y = "Samples", all.x = TRUE))
+head(PCR.data)
 rownames(PCR.data) <- paste(PCR.data$animal, PCR.data$time_point, sep = "_")
+head(PCR.data)
 
-###############################################
-# Calculate the log fold-change in expression #
-###############################################
+##################################################
+# 03 Calculate the log fold-change in expression #
+##################################################
 
 # Log 2 transform the CNRQ value
 PCR.data <- data.frame(PCR.data[, 1:(ncol(sample))], log(
@@ -70,6 +86,7 @@ PCR.data <- data.frame(PCR.data[, 1:(ncol(sample))], log(
 colnames(PCR.data) <- gsub(pattern = "_(CNRQ)", replacement = "_log\\1",
                            x = colnames(PCR.data))
 head(PCR.data)
+dim(PCR.data)
 
 # Define the variables required to compute fold-change in expression
 targets.animal <- unique(PCR.data$animal)
@@ -83,6 +100,8 @@ logFC <- cbind(logFC, matrix(data = unlist(x = strsplit(
   x = row.names(logFC), split = "_", fixed = TRUE)), nrow = length(rownames(
     logFC)), ncol = 2, byrow = TRUE))
 colnames(logFC) <- c("animal", "time_point")
+head(logFC)
+dim(logFC)
 
 # Compute the log fold-change in expression versus pre1 week
 for (gene in colnames(PCR.data)[(ncol(sample)+1):ncol(PCR.data)]){
@@ -100,9 +119,9 @@ for (gene in colnames(PCR.data)[(ncol(sample)+1):ncol(PCR.data)]){
 }
 head(logFC)
 
-########################################################
-# Assess normal distribution of PCR data for each gene #
-########################################################
+###########################################################
+# 04 Assess normal distribution of PCR data for each gene #
+###########################################################
 
 # Use the Shapiro-Wilk test on overall data
 shapiro <- apply(X = logFC[, ncol(sample):ncol(logFC)],
@@ -112,12 +131,12 @@ shapiro <- apply(X = logFC[, ncol(sample):ncol(logFC)],
 qqplot <- apply(X = logFC[, ncol(sample):ncol(logFC)], MARGIN = 2,
       FUN = function(x) qqnorm(y = x, main = colnames(x)))
 
-############################################################
-# Compute significance values of fold-change in expression #
-############################################################
+###############################################################
+# 05 Compute significance values of fold-change in expression #
+###############################################################
 
 # Prepare dataframe to include all fold-change and significance evaluation
-gene.list <- colnames(logFC)[ncol(sample):ncol(logFC)] %>% 
+gene.list <- colnames(logFC)[ncol(sample):ncol(logFC)] %>%
 lapply(X = ., FUN = function(x) rep(
   x = x, length(targets.time))) %>% unlist()
 full.rownames <- paste(gene.list, time.rownames, sep = ".") %>% gsub(
@@ -138,9 +157,9 @@ t.value <- list()
 w.value <- list()
 for (gene in gene.list){
   for (t.target in targets.time){
-    x.target <- logFC[logFC$time_point == t.target  & 
+    x.target <- logFC[logFC$time_point == t.target  &
                         logFC$animal %in% targets.animal, gene]
-    ref <- logFC[logFC$time_point == "pre1"  & 
+    ref <- logFC[logFC$time_point == "pre1"  &
                    logFC$animal %in% targets.animal, gene]
     stat.value <- describe(x.target)
     if (t.target == "pre1") {
@@ -157,7 +176,7 @@ for (gene in gene.list){
                           paired=TRUE, na.action = omit())
     w.value[t.target] <- list(w.eval)
     if (shap.eval == "NaN") {
-      final.pvalue <- "NaN"      
+      final.pvalue <- "NaN"
     }
     else if (shap.eval < 0.1) {
       final.pvalue <- w.eval$p.value
@@ -175,11 +194,13 @@ for (gene in gene.list){
                       w.eval$p.value, final.pvalue)
   }
 }
-sig
 
-##################################
-# Plot fold-change in expression #
-##################################
+head(sig)
+dim(sig)
+
+#####################################
+# 06 Plot fold-change in expression #
+#####################################
 
 # Add significance label
 sig <- sig_label(arg1 = sig, arg2 = "final.Pvalue")
@@ -191,54 +212,61 @@ head(sig)
 
 # Plot the expression data
 for (i in unique(sig$gene)) {
-  file <- paste(i, "png", sep=".")
+  file <- paste(i, "pdf", sep=".")
   dat <- sig[sig$gene == i, c("time_point", "meanlogFC", "se",
                               "Significance_label", "Methods")]
   plot1 <- ggplot(data = dat, aes(x = dat$time_point, y = dat$meanlogFC,
-                                  colour = dat$Methods)) + 
-    geom_point(size = 15) + geom_line(size = 5) + geom_text(
+                                  colour = dat$Methods)) +
+    geom_point(size = 3) + geom_line(size = 0.5) + geom_text(
       aes(x = dat$time_point, y = (dat$meanlogFC + dat$se),
-          label = dat$Significance_label), size = 22) + geom_errorbar(aes(
+          label = dat$Significance_label), size = 8) +
+    scale_x_discrete(limits = dat$time_point) +
+    geom_errorbar(aes(
         x = dat$time_point, ymin = (dat$meanlogFC - dat$se),
         ymax = (dat$meanlogFC + dat$se)),
-        width = 1, size = 2.5) + theme(
-          panel.background = element_rect(fill = 'wheat'), 
-          title = element_text(face = "bold", size = 45),
-          text = element_text(face = "bold", size = 35),
-          plot.title = element_text(face = "bold", size = 55),
-          legend.position = "right") + ggtitle(label = i) +
-    xlab("Time point (weeks)") + ylab("log2 fold-change") +
+        width = 0.4, size = 0.5) +
+    theme_bw(base_size = 14, base_family = "Calibri") +
+    ggtitle(label = i) +
+    xlab("Time point (weeks) vs. -1 wk") +
+    ylab(expression(paste(log[10], "fold-change"))) +
     scale_colour_discrete(name = "Methods")
-  png(filename = file, width = 1366, height = 1366, units = "px")
+  cairo_pdf(filename = file, width = 6, height = 6)
   print(plot1)
   dev.off()
 }
 
 # Read in the excel file containing miRNA gene information
-gene.info <- read.xls(xls = "miRNA_RTqPCR_gene.xlsx", sheet = 1,
-                header = TRUE, na.strings = "NaN")
+gene.info <- data.frame(read_excel("miRNA_RTqPCR_gene.xlsx",
+                        col_names = TRUE,
+                        na = "NA"))
+head(gene.info)
 
 # Include the gene information with the differential expression results
-sig <- merge(x = gene.info, y = sig, by.x = "Gene_performed", by.y = "gene",
+sig <- merge(x = gene.info, y = sig,
+             by.x = "Primer_name", by.y = "gene",
              all.y = TRUE)
-sig
+head(sig)
 
 # Output the RT-qPCR differential expression results
-write.table(x = sig, file = "RT-qPCR_DE.txt", quote = FALSE, sep = "\t",
-            na = "NaN", row.names = FALSE, col.names = TRUE)
+write_csv(sig,
+          "RT-qPCR_DE_vs_pre1.csv",
+          col_names = TRUE,
+          na = "NA")
 
-############################
-# Clean up the R workspace #
-############################
+#######################
+# 07 Save .RData file #
+#######################
 
-# Remove temporary and unrequired variables
-rm(animal, col.data, dat, stat.value, animal.rownames, data.ref, data.target,
-   file, final.pvalue, full.colnames, full.rownames, gene, gene.list, gene.val,
-   i, plot1, ref, shap.eval, t.eval, t.target, targets.animal, targets.time,
-   time.rownames, user, w.eval, x.target, DESeq.merge, DEtable.merge,
-   diff_expr_edgeR, g.legend, loadpackage, miR.DE, multi.DE, multi.MDS,
-   sig_label, gene.info)
+save.image(file = paste0("RT-qPCR_", method, ".RData", sep = ""))
 
-#######
-# END #
-#######
+##########################
+# 08 Save R session info #
+##########################
+
+devtools::session_info()
+
+######################################
+# Proceed to Part 2 of this analysis #
+######################################
+
+# File: 02-miRNA-RT-qPCR_pre2.R
