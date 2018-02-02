@@ -343,6 +343,8 @@ save.image(file = paste0("miRNAseq_", method, ".RData", sep = ""))
 
 devtools::session_info()
 
-#######
-# END #
-#######
+######################################
+# Proceed to Part 4 of this analysis #
+######################################
+
+# File: 04-miRNAseq-Novo-feature-stats.R
