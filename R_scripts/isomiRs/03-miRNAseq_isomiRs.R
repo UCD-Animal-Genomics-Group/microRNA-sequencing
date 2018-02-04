@@ -168,7 +168,7 @@ testDE.W12$table %>%
 
 # +1 wk
 testDE.W1$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "Sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W1_FDR_05
@@ -177,7 +177,7 @@ W1_FDR_05
 
 # +2 wk
 testDE.W2$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "Sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W2_FDR_05
@@ -186,7 +186,7 @@ W2_FDR_05
 
 # +6 wk
 testDE.W6$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "Sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W6_FDR_05
@@ -195,7 +195,7 @@ W6_FDR_05
 
 # +10 wk
 testDE.W10$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "Sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W10_FDR_05
@@ -204,7 +204,7 @@ W10_FDR_05
 
 # +12 wk
 testDE.W12$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "Sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W12_FDR_05
@@ -230,11 +230,11 @@ pwalk(list(DElists, DEpaths),
 futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 
 # Plot Venn diagram for all time points
-venn.diagram(list(A = as.vector(W1_FDR_05$miRBase_ID),
-                  B = as.vector(W12_FDR_05$miRBase_ID),
-                  C = as.vector(W10_FDR_05$miRBase_ID),
-                  D = as.vector(W6_FDR_05$miRBase_ID),
-                  E = as.vector(W2_FDR_05$miRBase_ID)),
+venn.diagram(list(A = as.vector(W1_FDR_05$Sequence),
+                  B = as.vector(W12_FDR_05$Sequence),
+                  C = as.vector(W10_FDR_05$Sequence),
+                  D = as.vector(W6_FDR_05$Sequence),
+                  E = as.vector(W2_FDR_05$Sequence)),
              filename        = file.path(paste0(imgDir, method,
                                                 "_Venn_DE_FDR_05.png")),
              imagetype       = "png",
