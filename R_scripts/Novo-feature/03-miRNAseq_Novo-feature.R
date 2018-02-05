@@ -10,7 +10,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 09/01/2018
+# Last updated on 02/02/2018
 
 ############################################
 # 27 Load and/or install required packages #
@@ -26,7 +26,6 @@ library(Cairo)
 library(extrafont)
 library(VennDiagram)
 library(forcats)
-library(treemap)
 
 # Uncomment functions below to install packages in case you don't have them
 
@@ -259,9 +258,9 @@ venn.diagram(list(A = as.vector(W1_FDR_05$miRBase_ID),
              compression     = 'lzw',
              resolution      = 300)
 
-###############################################
-# 34 Plot: Treemaps of DE genes (FDR < 0.05) #
-###############################################
+##############################################
+# 34 Plot: Barplots of DE genes (FDR < 0.05) #
+##############################################
 
 # Get numbers of up and down regulated genes
 # at each time point
@@ -273,7 +272,7 @@ names(list_DE) <- c("+1 wk", "+2 wk", "+6 wk",
 Up_Down <- map_df(list_DE,
                   ~ dplyr::count(.x,
                                  up = sum(logFC > 0),
-                                 down = sum(logFC < 0),
+                                 down = -abs(sum(logFC < 0)),
                                  zero = sum(logFC == 0)),
                   .id = "time_point")
 
@@ -285,51 +284,45 @@ Up_Down$time_point %<>%
   factor() %>%
   fct_inorder()
 
-# Plotting labels
-Up_Down %<>% dplyr::mutate(labelsUp = paste(time_point, up, sep = ' '))
-Up_Down %<>% dplyr::mutate(labelsDown = paste(time_point, down, sep = ' '))
+levels(Up_Down$time_point)
+
+# Gather up and down, and get rid of unnecessary columns
+Up_Down %<>%
+  gather(key = "DE_genes", value = "number", c(up, down)) %>%
+  dplyr::select(-c(zero, n))
 
 # Check data frame
 Up_Down
 
-# Plot chart increased expression
-# Run this chunk together
-cairo_pdf(filename = file.path(paste0(imgDir, method, "_tree_up.pdf")),
-          width    = 8,
-          height   = 4,
-          family   = "Calibri",
-          fallback_resolution = 300)
-treemap(Up_Down,
-        index             = "labelsUp",
-        vSize             = "up",
-        type              = "index",
-        palette           = "PRGn",
-        title             = "Increased expression",
-        fontsize.title    = 14,
-        fontfamily.title  = "Calibri",
-        fontfamily.labels = "Calibri",
-        fontsize.labels   = 16)
-dev.off()
+# Up and down as factor
+Up_Down$DE_genes %<>%
+  factor() %>%
+  fct_inorder()
 
-# Plot chart decreased expression
-# Run this chunk together
-cairo_pdf(filename = file.path(paste0(imgDir, method, "_tree_down.pdf")),
-          width    = 8,
-          height   = 4,
-          family   = "Calibri",
-          fallback_resolution = 300)
-treemap(Up_Down,
-        index             = "labelsDown",
-        vSize             = "down",
-        type              = "index",
-        palette           = "-PRGn",
-        title             = "Decreased expression",
-        fontsize.title    = 14,
-        fontfamily.title  = "Calibri",
-        fontfamily.labels = "Calibri",
-        fontsize.labels   = 16)
-dev.off()
+levels(Up_Down$DE_genes)
 
+# Plot chart
+ggplot(Up_Down, aes(x = time_point,
+                    y = number,
+                    fill = DE_genes)) +
+  geom_bar(stat = "identity", position = "identity") +
+  geom_text(label = Up_Down$number) +
+  scale_fill_manual("Expression",
+                    values = alpha(c("#762A83", "#1B7837"), 0.6)) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle(paste0("Canonical DE miRNAs (", method, ")")) +
+  ylab(NULL) +
+  xlab(NULL) -> DE_barplot
+
+ggsave(paste(method, "_DE_barplot.pdf", sep = ""),
+       plot      = DE_barplot,
+       device    = cairo_pdf,
+       path      = imgDir,
+       limitsize = FALSE,
+       dpi       = 300,
+       height    = 5,
+       width     = 7,
+       units     = "in")
 
 #######################
 # 35 Save .RData file #
