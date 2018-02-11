@@ -12,7 +12,7 @@
 # Merge and uncompress miRNA-seq FASTQ files to be used with miRDeep2  #
 ########################################################################
 
-# Create and enter temporary workiing directory:
+# Create and enter temporary working directory:
 mkdir $HOME/scratch/miRNAseqValidation/fastq_sequence/tmp
 cd !$
 
@@ -86,6 +86,40 @@ chmod 755 $script
 nohup ./$script > ${script}.nohup &
 done
 
+# After mapping is finished,
+# generate a master file containing mapping statistics:
+for file in \
+`ls $HOME/scratch/miRNAseqValidation/mirdeep2/mapper/mapper.sh.0*.nohup`; \
+do grep -oP "log_\d+" $file >> ./log_id.txt; \
+grep "total:" $file >> ./totals.txt; \
+paste log_id.txt totals.txt > ./stats.txt; \
+done
+
+# Using awk, keep only columns of interest from stats.txt:
+awk '{print $1, $3, $4, $5, $6, $7}' stats.txt > stats2.txt
+
+# Adding header to stats2.txt and save mapper_stats.txt:
+echo -e "Log_Id Input_reads Total_Mapped_Reads Total_Unmapped_Reads \
+Percentage_Mapped_Reads Percentage_Unmapped_Reads" | cat - ./stats2.txt > \
+./mapper_stats.txt
+
+# Delete unnecessary files:
+rm -r log_id.txt totals.txt stats.txt stats2.txt
+
+# Get filenames from log ids:
+for file in \
+`ls $HOME/scratch/miRNAseqValidation/mirdeep2/mapper/mapper_logs/mapper.log_*`; \
+do basename $file | perl -p -e 's/mapper\.(log_\d+)_\d+/$1/' >> log.txt; \
+grep -oP "E\d*_collapsed.fa" $file | perl -p -e 's/(\d+_\w*\d+)_collapsed\.fa/$1/' \
+>> sample.txt; \
+paste log.txt sample.txt > ./id_sample.txt; \
+done
+
+# Delete unnecessary files:
+rm -r log.txt sample.txt
+
+# Transfer mapper_stats.txt and id_sample.txt to laptop via SCP.
+
 ################################################################
 # Quantification of known miRNAs using miRDeep2: quantifier.pl #
 ################################################################
@@ -148,7 +182,7 @@ nohup ./$script > ${script}.nohup &
 done
 
 # Collect all read counts files from regular and high confidence miRNAs for
-# transfering into laptop using WinSCP:
+# easier transfer into laptop using WinSCP:
 mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/regular
 cd !$
 for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/quantifier/E* \
@@ -166,6 +200,10 @@ do outfile=`echo $file | perl -p -e 's/^.*quantifier\/.*\/(.*)\/.*$/$1/'`; \
 cp $file \
 $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/high_conf/${outfile}_expressed_high_conf.csv; \
 done
+
+# After transferring into laptop, delete duplicate count folders:
+cd $HOME/scratch/miRNAseqValidation/Counts
+rm -r mirdeep2/
 
 ########################################################################
 # Identification of known and novel miRNAs using miRDeep2: miRDeep2.pl #
@@ -269,22 +307,22 @@ done
 
 # Collect all read counts files from regular and high confidence miRNAs for
 # transfering into laptop using WinSCP:
-mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/mirdeep.pl/regular
+mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep.pl/regular
 cd !$
 for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/E* \
 -name miRNAs_expressed_all_samples*.csv`; \
 do outfile=`echo $file | perl -p -e 's/^.*mirdeep\/(.*)\/.*$/$1/'`; \
 cp $file \
-$HOME/scratch/miRNAseqValidation/Counts/mirdeep2/mirdeep.pl/regular/${outfile}_exp_mirdeep.csv; \
+$HOME/scratch/miRNAseqValidation/Counts/mirdeep.pl/regular/${outfile}_exp_mirdeep.csv; \
 done
 
-mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep2/high_conf
+mkdir -p $HOME/scratch/miRNAseqValidation/Counts/mirdeep.pl/high_conf
 cd !$
 for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/high_confidence/E* \
--name miRNAs_expressed_all_samples*.csv`; \
+-name result*.csv`; \
 do outfile=`echo $file | perl -p -e 's/^.*mirdeep\/.*\/(.*)\/.*$/$1/'`; \
 cp $file \
-$HOME/scratch/miRNAseqValidation/Counts/mirdeep2/mirdeep.pl/high_conf/${outfile}_exp_mirdeep_hc.csv; \
+$HOME/scratch/miRNAseqValidation/Counts/mirdeep.pl/high_conf/${outfile}_novel_hc.csv; \
 done
 
 ########################################
