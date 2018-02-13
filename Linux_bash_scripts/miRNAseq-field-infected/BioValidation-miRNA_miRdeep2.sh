@@ -325,6 +325,17 @@ cp $file \
 $HOME/scratch/miRNAseqValidation/Counts/mirdeep.pl/high_conf/${outfile}_novel_hc.csv; \
 done
 
+# Collet data from predicted novel miRNAs for transfering into laptop:
+mkdir $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/novel_miRNAs
+cd !$
+for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/E* \
+-name result_*.csv`; \
+do outfile=`basename $file | perl -p -e 's/result_.+(\.csv)/novel_miRNAs$1/'`; \
+sample=`dirname $file | perl -p -e 's/.+mirdeep\/(E\d+).*/$1/'`; \
+cp $file ./$sample\_$outfile; \
+done
+
+
 ########################################
 # R analysis of gene counts with edgeR #
 ########################################
