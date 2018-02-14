@@ -336,9 +336,9 @@ cp $file ./$sample\_$outfile; \
 done
 
 # Clean data to keep only info about novel miRNAs:
-for file in `ls $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/novel_miRNAs/E*_novel.csv`; \
+for file in `ls $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/novel_miRNAs/E*_novel_miRNAs.csv`; \
 do outfile=`basename $file | perl -p -e 's/(E\d+)_novel_miRNAs.csv/$1_clean.csv/'`; \
-sed '/mature miRBase miRNAs/,$d' $file > $outfile; \
+sed '/provisional id/,$!d' $file | sed '/mature miRBase miRNAs/,$d' > $outfile; \
 done
 
 # Transfer cleaned file to laptop with SCP.
