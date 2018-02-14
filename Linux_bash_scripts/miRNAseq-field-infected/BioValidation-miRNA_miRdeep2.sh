@@ -325,7 +325,7 @@ cp $file \
 $HOME/scratch/miRNAseqValidation/Counts/mirdeep.pl/high_conf/${outfile}_novel_hc.csv; \
 done
 
-# Collet data from predicted novel miRNAs for transfering into laptop:
+# Collet data from predicted novel miRNAs into one folder:
 mkdir $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/novel_miRNAs
 cd !$
 for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/E* \
@@ -335,6 +335,13 @@ sample=`dirname $file | perl -p -e 's/.+mirdeep\/(E\d+).*/$1/'`; \
 cp $file ./$sample\_$outfile; \
 done
 
+# Clean data to keep only info about novel miRNAs:
+for file in `ls $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/novel_miRNAs/E*_novel.csv`; \
+do outfile=`basename $file | perl -p -e 's/(E\d+)_novel_miRNAs.csv/$1_clean.csv/'`; \
+sed '/mature miRBase miRNAs/,$d' $file > $outfile; \
+done
+
+# Transfer cleaned file to laptop with SCP.
 
 ########################################
 # R analysis of gene counts with edgeR #
