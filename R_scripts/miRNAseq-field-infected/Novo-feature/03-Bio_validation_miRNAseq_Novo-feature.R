@@ -160,8 +160,84 @@ ggsave(paste(method, "_DE_barplot.pdf", sep = ""),
        width     = 7,
        units     = "in")
 
+#################################################
+# 33 Tidy data for plotting most abundant genes #
+#################################################
+
+# Get CPM values normalised by library size
+norm_cpm <- cpm(dgelist_fit$counts,
+                normalized.lib.sizes = TRUE)
+
+head(norm_cpm)
+
+# Tidy data frame
+norm_cpm %<>%
+  data.frame() %>%
+  rownames_to_column(var = "miRBaseID") %>%
+  gather(key = "sample", value = "cpm", starts_with("E"))
+
+head(norm_cpm)
+
+# Merge with gene information
+dgelist_fit$genes %>%
+  rownames_to_column(var = "miRBaseID") %>%
+  dplyr::select(miRBaseID, gene_name) %>%
+  dplyr::inner_join(x = norm_cpm,
+                    y = ., by = "miRBaseID") %>%
+  unite(col = "label",
+        c("gene_name", "miRBaseID"),
+        sep = " (") -> norm_cpm
+
+norm_cpm$label %<>%
+  str_c(., ")")
+
+head(norm_cpm)
+
+#################################################
+# 34 Plot: Boxplot of most abundant miRNA genes #
+#################################################
+
+# Get top 30 genes
+norm_cpm %>%
+  dplyr::group_by(label) %>%
+  dplyr::summarise(sum_cpm = sum(cpm)) %>%
+  dplyr::arrange(desc(sum_cpm)) %>%
+  dplyr::filter(!str_detect(label, "MIMAT0003844_1")) %>%
+  dplyr::filter(!str_detect(label, "MIMAT0024579_5")) %>%
+  dplyr::filter(!str_detect(label, "MIMAT0009225_1")) %>%
+  dplyr::filter(!str_detect(label, "MIMAT0025559_1")) %>%
+  dplyr::filter(!str_detect(label, "MIMAT0025559_6")) %>%
+  head(30) -> top30
+
+
+# Filter and plot
+norm_cpm %>%
+  dplyr::filter(label %in% top30$label) %>%
+  ggplot() +
+  geom_boxplot(aes(label, log10(cpm)),
+               fill = "#efedf5") +
+  scale_x_discrete(limits = top30$label) +
+  theme_bw() +
+  ggtitle(method) +
+  xlab(NULL) +
+  ylab(expression(paste(log[10], "CPM", sep = ""))) +
+  theme(axis.text.x = element_text(angle = 45,
+                                   hjust = 1),
+        text = element_text(size = 14,
+                            family = "Calibri")) -> boxplot_top
+
+ggsave(paste0(method, "-boxplot", ".pdf"),
+       plot      = boxplot_top,
+       device    = cairo_pdf,
+       limitsize = FALSE,
+       dpi       = 300,
+       height    = 8,
+       width     = 15,
+       units     = "in",
+       path      = imgDir)
+
 #######################
-# 33 Save .RData file #
+# 35 Save .RData file #
 #######################
 
 save.image(file = paste0("miRNAseq_", method, ".RData", sep = ""))
