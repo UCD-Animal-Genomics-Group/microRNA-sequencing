@@ -341,7 +341,29 @@ do outfile=`basename $file | perl -p -e 's/(E\d+)_novel_miRNAs.csv/$1_clean.csv/
 sed '/provisional id/,$!d' $file | sed '/mature miRBase miRNAs/,$d' > $outfile; \
 done
 
-# Transfer cleaned file to laptop with SCP.
+# Transfer cleaned files to laptop with SCP.
+
+##############################
+# isomiR count summarisation #
+##############################
+
+# Process miRDeep2 output files to collect all isoforms read counts files:
+mkdir -p $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/isomiR_counts
+cd !$
+
+for file in `find $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep \
+-name "miRBase.mrd"`; \
+do outfile=`echo $file | perl -p -e 's/.+mirdeep\/(E\\d+).+/$1_isomiR.txt/'`; \
+echo "perl $HOME/storage/Scripts/Get_isomiR_count.pl -mrd $file \
+-output $HOME/scratch/miRNAseqValidation/mirdeep2/mirdeep/isomiR_counts/$outfile" \
+>> isomiR_summarisation.sh; \
+done
+
+# Run the script on Stampede
+chmod 755 isomiR_summarisation.sh
+nohup ./isomiR_summarisation.sh &
+
+# Transfer isomiR count files to laptop with SCP.
 
 ########################################
 # R analysis of gene counts with edgeR #
