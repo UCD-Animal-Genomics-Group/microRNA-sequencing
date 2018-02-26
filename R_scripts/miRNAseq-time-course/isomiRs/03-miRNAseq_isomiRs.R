@@ -10,7 +10,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 18/01/2018
+# Last updated on 26/02/2018
 
 ############################################
 # 30 Load and/or install required packages #
@@ -124,7 +124,7 @@ head(testDE.W12$table)
 
 # +1 wk
 testDE.W1$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::mutate(is.DE = if_else(FDR < 0.05, "TRUE", "FALSE")) %>%
   dplyr::arrange(FDR) %>%
   write_csv(file.path(paste0(tablesDir, method, "_W1_AllGenes.csv")),
@@ -132,7 +132,7 @@ testDE.W1$table %>%
 
 # +2 wk
 testDE.W2$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::mutate(is.DE = if_else(FDR < 0.05, "TRUE", "FALSE")) %>%
   dplyr::arrange(FDR) %>%
   write_csv(file.path(paste0(tablesDir, method, "_W2_AllGenes.csv")),
@@ -140,7 +140,7 @@ testDE.W2$table %>%
 
 # +6 wk
 testDE.W6$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::mutate(is.DE = if_else(FDR < 0.05, "TRUE", "FALSE")) %>%
   dplyr::arrange(FDR) %>%
   write_csv(file.path(paste0(tablesDir, method, "_W6_AllGenes.csv")),
@@ -148,7 +148,7 @@ testDE.W6$table %>%
 
 # +10 wk
 testDE.W10$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::mutate(is.DE = if_else(FDR < 0.05, "TRUE", "FALSE")) %>%
   dplyr::arrange(FDR) %>%
   write_csv(file.path(paste0(tablesDir, method, "_W10_AllGenes.csv")),
@@ -156,7 +156,7 @@ testDE.W10$table %>%
 
 # +12 wk
 testDE.W12$table %>%
-  rownames_to_column(var = "miRBase_ID") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::mutate(is.DE = if_else(FDR < 0.05, "TRUE", "FALSE")) %>%
   dplyr::arrange(FDR) %>%
   write_csv(file.path(paste0(tablesDir, method, "_W12_AllGenes.csv")),
@@ -168,7 +168,7 @@ testDE.W12$table %>%
 
 # +1 wk
 testDE.W1$table %>%
-  rownames_to_column(var = "Sequence") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W1_FDR_05
@@ -177,7 +177,7 @@ W1_FDR_05
 
 # +2 wk
 testDE.W2$table %>%
-  rownames_to_column(var = "Sequence") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W2_FDR_05
@@ -186,7 +186,7 @@ W2_FDR_05
 
 # +6 wk
 testDE.W6$table %>%
-  rownames_to_column(var = "Sequence") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W6_FDR_05
@@ -195,7 +195,7 @@ W6_FDR_05
 
 # +10 wk
 testDE.W10$table %>%
-  rownames_to_column(var = "Sequence") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W10_FDR_05
@@ -204,7 +204,7 @@ W10_FDR_05
 
 # +12 wk
 testDE.W12$table %>%
-  rownames_to_column(var = "Sequence") %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
   dplyr::filter(FDR < 0.05) %>%
   dplyr::arrange(FDR) %>%
   as.tibble() -> W12_FDR_05
@@ -230,11 +230,11 @@ pwalk(list(DElists, DEpaths),
 futile.logger::flog.threshold(futile.logger::ERROR, name = "VennDiagramLogger")
 
 # Plot Venn diagram for all time points
-venn.diagram(list(A = as.vector(W1_FDR_05$Sequence),
-                  B = as.vector(W12_FDR_05$Sequence),
-                  C = as.vector(W10_FDR_05$Sequence),
-                  D = as.vector(W6_FDR_05$Sequence),
-                  E = as.vector(W2_FDR_05$Sequence)),
+venn.diagram(list(A = as.vector(W1_FDR_05$`IsomiR sequence`),
+                  B = as.vector(W12_FDR_05$`IsomiR sequence`),
+                  C = as.vector(W10_FDR_05$`IsomiR sequence`),
+                  D = as.vector(W6_FDR_05$`IsomiR sequence`),
+                  E = as.vector(W2_FDR_05$`IsomiR sequence`)),
              filename        = file.path(paste0(imgDir, method,
                                                 "_Venn_DE_FDR_05.png")),
              imagetype       = "png",
@@ -259,9 +259,9 @@ venn.diagram(list(A = as.vector(W1_FDR_05$Sequence),
              compression     = 'lzw',
              resolution      = 300)
 
-###############################################
+##############################################
 # 37 Plot: Treemaps of DE genes (FDR < 0.05) #
-###############################################
+##############################################
 
 # Get numbers of up and down regulated genes
 # at each time point
@@ -330,8 +330,103 @@ treemap(Up_Down,
         fontsize.labels   = 16)
 dev.off()
 
+###############################################
+# 38 Number of DE isomiRs per canonical miRNA #
+###############################################
+
+# +1 wk
+W1_FDR_05 %>%
+  dplyr::select(-c(starts_with("log"), contains("position"),
+                   starts_with("canon_"),
+                   LR, PValue, FDR)) %>%
+  na.omit() %>%
+  dplyr::group_by(canonical_miRNA_ID) %>%
+  dplyr::mutate(total_isomirs_per_canonical =
+                  length(unique(`IsomiR sequence`))) %>%
+  dplyr::mutate(isomiRs = paste(`IsomiR sequence`, collapse = ",")) %>%
+  dplyr::select(-c(`IsomiR sequence`, mismatch)) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(desc(total_isomirs_per_canonical)) -> iso_W1
+
+View(iso_W1)
+
+# +2 wk
+W2_FDR_05 %>%
+  dplyr::select(-c(starts_with("log"), contains("position"),
+                   starts_with("canon_"),
+                   LR, PValue, FDR)) %>%
+  na.omit() %>%
+  dplyr::group_by(canonical_miRNA_ID) %>%
+  dplyr::mutate(total_isomirs_per_canonical =
+                  length(unique(`IsomiR sequence`))) %>%
+  dplyr::mutate(isomiRs = paste(`IsomiR sequence`, collapse = ",")) %>%
+  dplyr::select(-c(`IsomiR sequence`, mismatch)) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(desc(total_isomirs_per_canonical)) -> iso_W2
+
+View(iso_W2)
+
+# +6 wk
+W6_FDR_05 %>%
+  dplyr::select(-c(starts_with("log"), contains("position"),
+                   starts_with("canon_"),
+                   LR, PValue, FDR)) %>%
+  na.omit() %>%
+  dplyr::group_by(canonical_miRNA_ID) %>%
+  dplyr::mutate(total_isomirs_per_canonical =
+                  length(unique(`IsomiR sequence`))) %>%
+  dplyr::mutate(isomiRs = paste(`IsomiR sequence`, collapse = ",")) %>%
+  dplyr::select(-c(`IsomiR sequence`, mismatch)) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(desc(total_isomirs_per_canonical)) -> iso_W6
+
+View(iso_W6)
+
+# +10 wk
+W10_FDR_05 %>%
+  dplyr::select(-c(starts_with("log"), contains("position"),
+                   starts_with("canon_"),
+                   LR, PValue, FDR)) %>%
+  na.omit() %>%
+  dplyr::group_by(canonical_miRNA_ID) %>%
+  dplyr::mutate(total_isomirs_per_canonical =
+                  length(unique(`IsomiR sequence`))) %>%
+  dplyr::mutate(isomiRs = paste(`IsomiR sequence`, collapse = ",")) %>%
+  dplyr::select(-c(`IsomiR sequence`, mismatch)) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(desc(total_isomirs_per_canonical)) -> iso_W10
+
+View(iso_W10)
+
+# +12 wk
+W12_FDR_05 %>%
+  dplyr::select(-c(starts_with("log"), contains("position"),
+                   starts_with("canon_"),
+                   LR, PValue, FDR)) %>%
+  na.omit() %>%
+  dplyr::group_by(canonical_miRNA_ID) %>%
+  dplyr::mutate(total_isomirs_per_canonical =
+                  length(unique(`IsomiR sequence`))) %>%
+  dplyr::mutate(isomiRs = paste(`IsomiR sequence`, collapse = ",")) %>%
+  dplyr::select(-c(`IsomiR sequence`, mismatch)) %>%
+  dplyr::distinct() %>%
+  dplyr::arrange(desc(total_isomirs_per_canonical)) -> iso_W12
+
+View(iso_W12)
+
+# Output data
+isoDE <- list(iso_W1, iso_W2, iso_W6, iso_W10, iso_W12)
+isofiles <- c(paste0(c("DE-iso_W1", "DE-iso_W2", "DE-iso_W6",
+                       "DE-iso_W10", "DE-iso_W12"),
+                     "_per-canonical.csv"))
+isopaths <- file.path(paste0(tablesDir, method, "_", isofiles))
+
+pwalk(list(isoDE, isopaths),
+      write_csv,
+      col_names = TRUE)
+
 #######################
-# 38 Save .RData file #
+# 39 Save .RData file #
 #######################
 
 save.image(file = paste0("miRNAseq_", method, ".RData", sep = ""))

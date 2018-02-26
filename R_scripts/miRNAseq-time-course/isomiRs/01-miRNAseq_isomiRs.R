@@ -10,7 +10,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 18/01/2018
+# Last updated on 26/02/2018
 
 ############################################
 # 01 Load and/or install required packages #
@@ -135,6 +135,21 @@ files %>%
            c("canon_position_start", "canon_position_end"),
            sep = "-", fill = "right") %>%
   dplyr::select(-c(pcount, ccount)) -> miRNA_info
+
+# Check data frame
+miRNA_info
+
+# Add canonical gene name
+read_tsv("miRNA_Btaurus.txt", col_names = TRUE) %>%
+  dplyr::select(gene_id, gene_name, chromosome, strand) %>%
+  dplyr::rename(canonical_miRNA_ID = gene_id,
+                canonical_miRNA_name = gene_name,
+                canon_chromosome = chromosome,
+                canon_strand = strand) %>%
+  dplyr::right_join(miRNA_info, by = c("canonical_miRNA_ID")) %>%
+  dplyr::select(sequence, isomiR_position_start,
+                isomiR_position_end, mismatch,
+                everything()) -> miRNA_info
 
 # Check data frame
 miRNA_info
@@ -309,6 +324,7 @@ head(dgelist$samples)
 
 # Output sample information
 dgelist$samples %>%
+  rownames_to_column(var = "sample") %>%
   write_csv(file.path(paste0(tablesDir, method, "_samples-info.csv", sep = "")),
             col_names = TRUE)
 

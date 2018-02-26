@@ -10,7 +10,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 19/01/2018
+# Last updated on 26/02/2018
 
 ############################################
 # 16 Load and/or install required packages #
@@ -374,8 +374,9 @@ colnames(block_animal) %<>%
 head(block_animal)
 
 # Output the design matrix info
-write_csv(as.data.frame(block_animal),
-          path = file.path(paste0(tablesDir, method, "_design-matrix.csv")),
+as.data.frame(block_animal) %>%
+  rownames_to_column(var = "sample") %>%
+  write_csv(path = file.path(paste0(tablesDir, method, "_design-matrix.csv")),
           col_names = TRUE)
 
 #########################################
@@ -407,8 +408,9 @@ head(Tagwisedisp)
 dim(Tagwisedisp)
 
 # Output tagwise dispersion values with gene info
-write_csv(Tagwisedisp,
-          path = file.path(paste0(tablesDir, method, "_Tagwise_dispersion.csv")),
+Tagwisedisp %>%
+  rownames_to_column(var = "IsomiR sequence") %>%
+  write_csv(path = file.path(paste0(tablesDir, method, "_Tagwise_dispersion.csv")),
           col_names = TRUE)
 
 ################################
