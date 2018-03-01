@@ -11,7 +11,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 22/02/2018
+# Last updated on 01/03/2018
 
 ############################################
 # 01 Load and/or install required packages #
@@ -136,6 +136,21 @@ files %>%
 # Check data frame
 miRNA_info
 
+# Add canonical gene name
+read_tsv("miRNA_Btaurus.txt", col_names = TRUE) %>%
+  dplyr::select(gene_id, gene_name, chromosome, strand) %>%
+  dplyr::rename(canonical_miRNA_ID = gene_id,
+                canonical_miRNA_name = gene_name,
+                canon_chromosome = chromosome,
+                canon_strand = strand) %>%
+  dplyr::right_join(miRNA_info, by = c("canonical_miRNA_ID")) %>%
+  dplyr::select(sequence, isomiR_position_start,
+                isomiR_position_end, mismatch,
+                everything()) -> miRNA_info
+
+# Check data frame
+miRNA_info
+
 #################################
 # 05 Clean gene annotation info #
 #################################
@@ -199,6 +214,10 @@ annotCounts %>%
 # How many isomiRs don't have a canonical match
 annotCounts %>%
   dplyr::filter(canonical_miRNA_ID == "NA")
+
+# Remove isomiRs that don't have a canonical match
+annotCounts %<>%
+  dplyr::filter(!canonical_miRNA_ID == "NA")
 
 # Output raw counts with gene information
 annotCounts %>%

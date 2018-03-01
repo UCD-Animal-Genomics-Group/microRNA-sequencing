@@ -11,7 +11,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 22/02/2018
+# Last updated on 01/03/2018
 
 ############################################
 # 16 Load and/or install required packages #

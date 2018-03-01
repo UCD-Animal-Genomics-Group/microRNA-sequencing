@@ -11,7 +11,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 22/02/2018
+# Last updated on 01/03/2018
 
 ############################################
 # 29 Load and/or install required packages #
@@ -161,9 +161,9 @@ ggsave(paste(method, "_DE_barplot.pdf", sep = ""),
        width     = 7,
        units     = "in")
 
-######################################################
-# 36 Get number of isomiR sequences per canonical ID #
-######################################################
+#########################################################
+# 36 Get number of DE isomiR sequences per canonical ID #
+#########################################################
 
 head(testDE$table)
 dim(testDE$table)
@@ -173,17 +173,15 @@ testDE$table %>%
   dplyr::group_by(canonical_miRNA_ID) %>%
   dplyr::mutate(total_isomirs_per_canonical =
                   length(unique(`IsomiR sequence`))) %>%
-  dplyr::select(-c(starts_with("log"),
-                   LR, PValue, FDR)) %>%
-  dplyr::arrange(desc(total_isomirs_per_canonical)) -> isomirs
+  dplyr::select(canonical_miRNA_ID, canonical_miRNA_name,
+                total_isomirs_per_canonical) %>%
+  dplyr::arrange(desc(total_isomirs_per_canonical)) %>%
+  dplyr::distinct() -> iso_canon
 
-View(isomirs)
+iso_canon
 
 # Output data
-isomirs %>%
-  dplyr::summarise(total_isomirs_per_canonical =
-                     length(unique(`IsomiR sequence`))) %>%
-  dplyr::arrange(desc(total_isomirs_per_canonical)) %>%
+iso_canon %>%
   write_csv(paste0(method, "-per-canonical.csv"), col_names = TRUE)
 
 #######################
