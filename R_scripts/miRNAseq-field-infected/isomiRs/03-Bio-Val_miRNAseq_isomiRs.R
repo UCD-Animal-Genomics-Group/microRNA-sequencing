@@ -182,16 +182,57 @@ iso_canon
 
 # Output data
 iso_canon %>%
-  write_csv(paste0(method, "-per-canonical.csv"), col_names = TRUE)
+  write_csv(file.path(paste0(tablesDir, method, "-per-canonical.csv")),
+            col_names = TRUE)
+
+###########################################################
+# 37 Plot: number of DE isomiR sequences per canonical ID #
+###########################################################
+
+# Plotting labels
+iso_canon %<>%
+  unite("label",
+        c(canonical_miRNA_name, canonical_miRNA_ID),
+        sep = " (")
+
+iso_canon$label %<>%
+  str_c(")") %>%
+  factor() %>%
+  fct_inorder()
+
+# Check data frame
+iso_canon
+
+# Plot
+ggplot(iso_canon) +
+  geom_point(aes(x = total_isomirs_per_canonical,
+                 y = label)) +
+  scale_y_discrete(limits = rev(levels(iso_canon$label))) +
+  theme_bw(base_size = 14, base_family = "Calibri") +
+  ggtitle(paste0("IsomiRs per canonical DE miRNAs (", method, ")")) +
+  ylab(NULL) +
+  xlab("Total isomiR number") -> iso_canon_plot
+
+iso_canon_plot
+
+ggsave(paste(method, "_DE_iso_canon_plot.pdf", sep = ""),
+       plot      = iso_canon_plot,
+       device    = cairo_pdf,
+       path      = imgDir,
+       limitsize = FALSE,
+       dpi       = 300,
+       height    = 15,
+       width     = 8,
+       units     = "in")
 
 #######################
-# 37 Save .RData file #
+# 38 Save .RData file #
 #######################
 
 save.image(file = paste0("miRNAseq_", method, ".RData", sep = ""))
 
 ##########################
-# 38 Save R session info #
+# 39 Save R session info #
 ##########################
 
 devtools::session_info()
