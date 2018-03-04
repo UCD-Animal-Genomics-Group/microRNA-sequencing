@@ -1,4 +1,4 @@
-Session info -----------------------------------------------------
+Session info --------------------------------------------
  setting  value
  version  R version 3.4.0 (2017-04-21)
  system   x86_64, darwin15.6.0
@@ -6,9 +6,9 @@ Session info -----------------------------------------------------
  language (EN)
  collate  en_IE.UTF-8
  tz       Europe/London
- date     2018-01-18
+ date     2018-03-04
 
-Packages ---------------------------------------------------------
+Packages ------------------------------------------------
  package        * version date       source
  assertthat       0.2.0   2017-04-11 CRAN (R 3.4.0)
  backports        1.0.5   2017-01-18 CRAN (R 3.4.0)
@@ -50,6 +50,7 @@ Packages ---------------------------------------------------------
  httr             1.3.1   2017-08-20 CRAN (R 3.4.1)
  igraph           1.1.2   2017-07-21 CRAN (R 3.4.1)
  jsonlite         1.4     2017-04-08 CRAN (R 3.4.0)
+ labeling         0.3     2014-08-23 CRAN (R 3.4.0)
  lambda.r         1.1.9   2016-07-10 CRAN (R 3.4.0)
  lattice          0.20-35 2017-03-25 CRAN (R 3.4.0)
  lazyeval         0.2.0   2016-06-12 CRAN (R 3.4.0)
@@ -86,6 +87,7 @@ Packages ---------------------------------------------------------
  stringr        * 1.2.0   2017-02-18 CRAN (R 3.4.0)
  tibble         * 1.3.3   2017-05-28 cran (@1.3.3)
  tidyr          * 0.7.0   2017-08-16 CRAN (R 3.4.1)
+ tidyselect       0.1.1   2017-07-24 CRAN (R 3.4.1)
  tidyverse      * 1.1.1   2017-01-27 CRAN (R 3.4.0)
  tools            3.4.0   2017-04-21 local
  treemap        * 2.4-2   2017-01-04 CRAN (R 3.4.0)
