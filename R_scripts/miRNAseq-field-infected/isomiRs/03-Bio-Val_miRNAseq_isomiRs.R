@@ -11,7 +11,7 @@
 
 # Authors of current version (2.0.0): Correia, C.N. and Nalpas, N.C.
 # DOI badge of current version:
-# Last updated on 01/03/2018
+# Last updated on 02/03/2018
 
 ############################################
 # 29 Load and/or install required packages #
@@ -165,11 +165,8 @@ ggsave(paste(method, "_DE_barplot.pdf", sep = ""),
 # 36 Get number of DE isomiR sequences per canonical ID #
 #########################################################
 
-head(testDE$table)
-dim(testDE$table)
-
-testDE$table %>%
-  rownames_to_column(var = "IsomiR sequence") %>%
+# Get total iso per canonical
+DE_FDR_05 %>%
   dplyr::group_by(canonical_miRNA_ID) %>%
   dplyr::mutate(total_isomirs_per_canonical =
                   length(unique(`IsomiR sequence`))) %>%
@@ -179,6 +176,13 @@ testDE$table %>%
   dplyr::distinct() -> iso_canon
 
 iso_canon
+
+# Get percentage iso per canonical
+iso_canon %<>%
+  dplyr::mutate(percent_iso_per_canon =
+                  (total_isomirs_per_canonical /
+                  sum(iso_canon$total_isomirs_per_canonical)
+                  * 100))
 
 # Output data
 iso_canon %>%
